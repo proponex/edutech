@@ -110,26 +110,62 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       };
 
+      console.log(`\n[MUX WEBHOOK]
+Event: video.asset.ready
+Video ID: ${passthrough || 'none'}
+Asset ID: ${assetId}
+Playback ID: ${publicPlaybackId || 'none'}
+Status: ready`);
+
       if (passthrough) {
-        const { error } = await supabase
+        // We use .select() to verify if the row actually exists and was updated
+        const { data: updatedVideo, error } = await supabase
           .from('videos')
           .update(updatePayload)
-          .eq('id', passthrough);
+          .eq('id', passthrough)
+          .select('id')
+          .single();
+
+        console.log(`\n[SUPABASE]
+Video found: ${!!updatedVideo}
+Update successful: ${!error}`);
 
         if (error) {
-          console.error('[MUX Webhook] Error updating video for asset.ready:', error);
-        } else {
-          console.log(`[MUX Webhook] Video ${passthrough} is now READY. Playback ID: ${publicPlaybackId}`);
+          console.error('[SUPABASE ERROR]', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          return NextResponse.json(
+            { error: 'Database update failed', details: error.message },
+            { status: 500 }
+          );
         }
       } else {
         // Fallback: find by mux_asset_id
-        const { error } = await supabase
+        const { data: updatedVideo, error } = await supabase
           .from('videos')
           .update(updatePayload)
-          .eq('mux_asset_id', assetId);
+          .eq('mux_asset_id', assetId)
+          .select('id')
+          .single();
+
+        console.log(`\n[SUPABASE]
+Video found (via asset_id): ${!!updatedVideo}
+Update successful: ${!error}`);
 
         if (error) {
-          console.error('[MUX Webhook] Error updating video by asset_id:', error);
+          console.error('[SUPABASE ERROR]', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          return NextResponse.json(
+            { error: 'Database update failed', details: error.message },
+            { status: 500 }
+          );
         }
       }
     }
