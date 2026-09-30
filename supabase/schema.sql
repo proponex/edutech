@@ -9,7 +9,7 @@
 -- 4. Storage bucket for 'banners' with public read & admin upload policies
 -- 5. Row Level Security (RLS) policies
 -- 6. Trigger for auto-creating profiles on auth.users sign-up
--- 7. Automated admin role promotion for admin@gmail.com
+-- 7. Automated admin role promotion for admin@gmail.com lkklfka
 -- ==============================================================================
 
 -- Enable UUID extension
