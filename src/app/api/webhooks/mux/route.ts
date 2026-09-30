@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import Mux from '@mux/mux-node';
 
-// Use service-role or anon key for webhook (no user cookies in webhooks)
+// Use service-role key for webhook — webhooks have NO user session,
+// so the anon key + RLS policies block all writes silently.
 function createServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() { return []; },
-      setAll() { /* no-op for webhook context */ },
-    },
-  });
+  if (!serviceRoleKey) {
+    console.error('[MUX Webhook] SUPABASE_SERVICE_ROLE_KEY is not set! Webhook updates will fail due to RLS.');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
 }
 
 const mux = new Mux({
