@@ -30,9 +30,8 @@ export async function POST(request: NextRequest) {
     if (webhookSecret) {
       const signatureHeader = request.headers.get('mux-signature') || '';
       try {
-        event = await mux.webhooks.verifySignature(rawBody, {
-          'mux-signature': signatureHeader,
-        }) as unknown as { type: string; data: Record<string, unknown> };
+        const headers = Object.fromEntries(request.headers.entries());
+        event = mux.webhooks.unwrap(rawBody, headers, webhookSecret) as unknown as { type: string; data: Record<string, unknown> };
       } catch (verifyErr) {
         console.error('[MUX Webhook] Signature verification failed:', verifyErr);
         return NextResponse.json(
