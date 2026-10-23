@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -42,6 +42,8 @@ import {
   ChannelReview,
   TeacherMessage,
   ContentProgressStatus,
+  SubscriptionDuration,
+  ScopePricingConfig,
 } from '@/types';
 import { StudentService } from '@/lib/student-service';
 import { MuxVideoPlayer } from '@/components/shared/MuxVideoPlayer';
@@ -79,9 +81,60 @@ function ChannelDetailContent() {
   // Package Modal & Locked Alert Modal
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<SubscriptionPackageType>('entire_channel');
+  const [monetizationPricing, setMonetizationPricing] = useState<{
+    channelPricing?: ScopePricingConfig;
+    subjectPricing?: ScopePricingConfig[];
+    chapterPricing?: any[];
+  } | null>(null);
+  const [selectedScope, setSelectedScope] = useState<'channel' | 'subject'>('channel');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedDuration, setSelectedDuration] = useState<SubscriptionDuration>('1_month');
   const [processingSubscribe, setProcessingSubscribe] = useState(false);
   const [subscriptionSuccess, setSubscriptionSuccess] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  const currentPlanPricePaise = useMemo(() => {
+    if (selectedScope === 'channel') {
+      const p = monetizationPricing?.channelPricing;
+      if (!p) return 119900;
+      let base = p.monthly_paise;
+      let student = p.student_monthly_paise;
+      if (selectedDuration === '12_months') {
+        base = p.yearly_paise || p.monthly_paise * 10;
+        student = p.student_yearly_paise || Math.round(base * 1.2);
+      } else if (selectedDuration === '6_months') {
+        base = p.six_month_paise || p.monthly_paise * 5;
+        student = p.student_six_month_paise || Math.round(base * 1.2);
+      }
+      return student || Math.round(base * 1.2);
+    } else {
+      const match = monetizationPricing?.subjectPricing?.find((s) => s.subject_name === selectedSubject);
+      if (!match) return 59900;
+      let base = match.monthly_paise;
+      let student = match.student_monthly_paise;
+      if (selectedDuration === '12_months') {
+        base = match.yearly_paise || match.monthly_paise * 10;
+        student = match.student_yearly_paise || Math.round(base * 1.2);
+      } else if (selectedDuration === '6_months') {
+        base = match.six_month_paise || match.monthly_paise * 5;
+        student = match.student_six_month_paise || Math.round(base * 1.2);
+      }
+      return student || Math.round(base * 1.2);
+    }
+  }, [monetizationPricing, selectedScope, selectedSubject, selectedDuration]);
+
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
   // Phase 5.1: Subject Filter & 1.5 Unit Expansion
   const [filterSubject, setFilterSubject] = useState<string>('all');
   const [isContentExpanded, setIsContentExpanded] = useState(false);
@@ -140,6 +193,20 @@ function ChannelDetailContent() {
 
           const msgs = await StudentService.getMessagesFromTeacher(user.id, channelId);
           setTeacherMessages(msgs);
+        }
+
+        // Load authoritative monetization pricing
+        try {
+          const pricingRes = await fetch(`/api/monetization/pricing?channelId=${channelId}`);
+          if (pricingRes.ok) {
+            const pricingData = await pricingRes.json();
+            setMonetizationPricing(pricingData);
+            if (pricingData.subjectPricing && pricingData.subjectPricing.length > 0) {
+              setSelectedSubject(pricingData.subjectPricing[0].subject_name || '');
+            }
+          }
+        } catch {
+          // Ignored if monetization service unavailable
         }
 
         // Auto-open subscribe modal if URL has ?action=subscribe
@@ -204,7 +271,7 @@ function ChannelDetailContent() {
     }
   };
 
-  // Handle Subscription Package Submission
+  // Handle Subscription Package Submission with Razorpay Checkout
   const handleConfirmPackageSelection = async () => {
     if (!currentUser) {
       router.push('/login');
@@ -213,32 +280,121 @@ function ChannelDetailContent() {
 
     setProcessingSubscribe(true);
     setSubscriptionSuccess(null);
+    setPaymentError(null);
 
     try {
       const primarySpecialization = channel?.specializations?.[0] || 'Subject';
-      const sub = await StudentService.subscribeToPackage({
-        studentId: currentUser.id,
-        channelId,
-        packageType: selectedPackage,
-        classId: channel?.class_id || channel?.class?.id,
-        subjectName: primarySpecialization,
+
+      // 1. Create order on server (authoritative server price validation)
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item_type: 'course',
+          item_id: channelId,
+          scope: selectedScope,
+          duration: selectedDuration,
+          package_type: selectedScope === 'channel' ? 'entire_channel' : 'class_subject',
+          class_id: channel?.class_id || channel?.class?.id,
+          subject_name: selectedScope === 'subject' ? selectedSubject : (channel?.specializations?.[0] || 'Subject'),
+        }),
       });
 
-      setSubscription(sub);
-      setSubscriberCount((prev) => prev + 1);
-      setSubscriptionSuccess('Package selected successfully! Content unlocked.');
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.success) {
+        throw new Error(orderData.error || 'Failed to initialize payment.');
+      }
 
-      // Reload progress & messages
-      const prog = await StudentService.getStudentProgress(currentUser.id, channelId);
-      setStudentProgress(prog);
+      // If free item, enrollment was granted directly on backend
+      if (orderData.isFree) {
+        setSubscriptionSuccess('Enrollment successful! Content unlocked.');
+        const sub = await StudentService.getSubscription(currentUser.id, channelId);
+        setSubscription(sub);
+        setSubscriberCount((prev) => prev + 1);
+        const prog = await StudentService.getStudentProgress(currentUser.id, channelId);
+        setStudentProgress(prog);
 
-      setTimeout(() => {
-        setIsPackageModalOpen(false);
-        setSubscriptionSuccess(null);
-      }, 1500);
-    } catch (err) {
-      console.error('Error subscribing:', err);
-    } finally {
+        setTimeout(() => {
+          setIsPackageModalOpen(false);
+          setSubscriptionSuccess(null);
+        }, 1500);
+        return;
+      }
+
+      // 2. Load official Razorpay Checkout SDK
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Unable to load Razorpay checkout SDK. Please verify your internet connection.');
+      }
+
+      // 3. Open Razorpay Checkout modal
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amountPaise,
+        currency: orderData.currency || 'INR',
+        name: 'Edutech Learning Platform',
+        description: `${orderData.itemName} - ${selectedPackage.replace(/_/g, ' ')}`,
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          try {
+            setProcessingSubscribe(true);
+            const verifyRes = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.success) {
+              throw new Error(verifyData.error || 'Payment verification failed.');
+            }
+
+            setSubscriptionSuccess('Payment verified successfully! Course unlocked.');
+            const sub = await StudentService.getSubscription(currentUser.id, channelId);
+            setSubscription(sub);
+            setSubscriberCount((prev) => prev + 1);
+            const prog = await StudentService.getStudentProgress(currentUser.id, channelId);
+            setStudentProgress(prog);
+
+            setTimeout(() => {
+              setIsPackageModalOpen(false);
+              setSubscriptionSuccess(null);
+            }, 1500);
+          } catch (vErr: any) {
+            setPaymentError(vErr.message || 'Payment verification failed.');
+          } finally {
+            setProcessingSubscribe(false);
+          }
+        },
+        prefill: {
+          name: currentUser.name || '',
+          email: currentUser.email || '',
+          contact: currentUser.phone || '',
+        },
+        theme: {
+          color: '#4f46e5',
+        },
+        modal: {
+          ondismiss: function () {
+            setProcessingSubscribe(false);
+          },
+        },
+      };
+
+      const rzpInstance = new (window as any).Razorpay(options);
+      rzpInstance.on('payment.failed', function (resp: any) {
+        console.error('[Razorpay payment failed]:', resp);
+        setPaymentError(resp.error?.description || 'Payment was declined or failed.');
+        setProcessingSubscribe(false);
+      });
+      rzpInstance.open();
+    } catch (err: any) {
+      console.error('Error during checkout flow:', err);
+      setPaymentError(err.message || 'Payment initiation error.');
       setProcessingSubscribe(false);
     }
   };
@@ -1080,142 +1236,202 @@ function ChannelDetailContent() {
                 Select your preferred learning plan. Choose full channel access, class-specific curriculum, or targeted subject mastery.
               </p>
 
-              <div className="space-y-3">
-                {/* 1. Entire Channel */}
-                <div
-                  onClick={() => setSelectedPackage('entire_channel')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    selectedPackage === 'entire_channel'
-                      ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 shadow-md shadow-primary-500/10'
-                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          selectedPackage === 'entire_channel'
-                            ? 'border-primary-500 bg-primary-500'
-                            : 'border-neutral-400'
-                        }`}
-                      >
-                        {selectedPackage === 'entire_channel' && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
-                      </div>
-                      <span className="font-extrabold text-sm text-neutral-900 dark:text-white">
-                        Entire Channel Access
-                      </span>
-                    </div>
-                    <span className="font-extrabold text-base text-primary-700 dark:text-primary-400">
-                      ₹999 <span className="text-xs font-normal text-neutral-400">/ mo</span>
-                    </span>
-                  </div>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 pl-6">
-                    Full access to all units, videos, quizzes, and homework across the entire channel.
-                  </p>
-                </div>
-
-                {/* 2. Particular Class */}
-                <div
-                  onClick={() => setSelectedPackage('particular_class')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    selectedPackage === 'particular_class'
-                      ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 shadow-md shadow-primary-500/10'
-                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          selectedPackage === 'particular_class'
-                            ? 'border-primary-500 bg-primary-500'
-                            : 'border-neutral-400'
-                        }`}
-                      >
-                        {selectedPackage === 'particular_class' && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
-                      </div>
-                      <span className="font-extrabold text-sm text-neutral-900 dark:text-white">
-                        Particular Class ({channel.class?.name || 'Enrolled Class'})
-                      </span>
-                    </div>
-                    <span className="font-extrabold text-base text-primary-700 dark:text-primary-400">
-                      ₹699 <span className="text-xs font-normal text-neutral-400">/ mo</span>
-                    </span>
-                  </div>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 pl-6">
-                    Focused curriculum access designed exclusively for {channel.class?.name || 'this class'}.
-                  </p>
-                </div>
-
-                {/* 3. Particular Class + Subject */}
-                <div
-                  onClick={() => setSelectedPackage('class_subject')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    selectedPackage === 'class_subject'
-                      ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 shadow-md shadow-primary-500/10'
-                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          selectedPackage === 'class_subject'
-                            ? 'border-primary-500 bg-primary-500'
-                            : 'border-neutral-400'
-                        }`}
-                      >
-                        {selectedPackage === 'class_subject' && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
-                      </div>
-                      <span className="font-extrabold text-sm text-neutral-900 dark:text-white">
-                        Class + Subject Mastery ({channel.specializations?.[0] || 'Subject'})
-                      </span>
-                    </div>
-                    <span className="font-extrabold text-base text-primary-700 dark:text-primary-400">
-                      ₹499 <span className="text-xs font-normal text-neutral-400">/ mo</span>
-                    </span>
-                  </div>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 pl-6">
-                    Specialized single-subject bundle including all test series, notes, and homework for {channel.specializations?.[0] || 'Subject'}.
-                  </p>
+              {/* Duration Selector Tabs */}
+              <div>
+                <label className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
+                  Choose Duration
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['1_month', '6_months', '12_months'] as SubscriptionDuration[]).map((dur) => (
+                    <button
+                      key={dur}
+                      type="button"
+                      onClick={() => setSelectedDuration(dur)}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                        selectedDuration === dur
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 shadow-sm'
+                          : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300'
+                      }`}
+                    >
+                      {dur === '1_month' ? '1 Month' : dur === '6_months' ? '6 Months' : '12 Months'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Ready for future payment note */}
-              <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-[11px] text-neutral-500 dark:text-neutral-400 flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 shrink-0 text-primary-600 mt-0.5" />
-                <span>
-                  Payment integration gateway will be connected in the Payment Phase. Selecting a package now immediately activates your learning entitlement.
+              <div className="space-y-3 pt-1">
+                {/* 1. Entire Channel */}
+                <div
+                  onClick={() => setSelectedScope('channel')}
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                    selectedScope === 'channel'
+                      ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 shadow-md shadow-primary-500/10'
+                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          selectedScope === 'channel'
+                            ? 'border-primary-500 bg-primary-500'
+                            : 'border-neutral-400'
+                        }`}
+                      >
+                        {selectedScope === 'channel' && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                      <span className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                        Entire Channel Subscription
+                      </span>
+                    </div>
+                    <span className="font-extrabold text-base text-primary-700 dark:text-primary-400">
+                      ₹{(() => {
+                        const p = monetizationPricing?.channelPricing;
+                        if (!p) return '1,199';
+                        const base =
+                          selectedDuration === '12_months'
+                            ? p.yearly_paise || p.monthly_paise * 10
+                            : selectedDuration === '6_months'
+                            ? p.six_month_paise || p.monthly_paise * 5
+                            : p.monthly_paise;
+                        const student =
+                          selectedDuration === '12_months'
+                            ? p.student_yearly_paise || Math.round(base * 1.2)
+                            : selectedDuration === '6_months'
+                            ? p.student_six_month_paise || Math.round(base * 1.2)
+                            : p.student_monthly_paise || Math.round(base * 1.2);
+                        return (student / 100).toLocaleString('en-IN');
+                      })()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 pl-6">
+                    Full access to all current and upcoming subjects, units, videos, and materials in this channel (includes 20% platform fee).
+                  </p>
+                </div>
+
+                {/* 2. Particular Subject */}
+                <div
+                  onClick={() => setSelectedScope('subject')}
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                    selectedScope === 'subject'
+                      ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 shadow-md shadow-primary-500/10'
+                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          selectedScope === 'subject'
+                            ? 'border-primary-500 bg-primary-500'
+                            : 'border-neutral-400'
+                        }`}
+                      >
+                        {selectedScope === 'subject' && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                      <span className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                        Subject Subscription
+                      </span>
+                    </div>
+                    <span className="font-extrabold text-base text-primary-700 dark:text-primary-400">
+                      ₹{(() => {
+                        const match = monetizationPricing?.subjectPricing?.find((s) => s.subject_name === selectedSubject);
+                        if (!match) return '599';
+                        const base =
+                          selectedDuration === '12_months'
+                            ? match.yearly_paise || match.monthly_paise * 10
+                            : selectedDuration === '6_months'
+                            ? match.six_month_paise || match.monthly_paise * 5
+                            : match.monthly_paise;
+                        const student =
+                          selectedDuration === '12_months'
+                            ? match.student_yearly_paise || Math.round(base * 1.2)
+                            : selectedDuration === '6_months'
+                            ? match.student_six_month_paise || Math.round(base * 1.2)
+                            : match.student_monthly_paise || Math.round(base * 1.2);
+                        return (student / 100).toLocaleString('en-IN');
+                      })()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 pl-6">
+                    Targeted access to all units and lessons for a specific subject only.
+                  </p>
+
+                  {/* Subject selector when subject scope chosen */}
+                  {selectedScope === 'subject' && monetizationPricing?.subjectPricing && monetizationPricing.subjectPricing.length > 0 && (
+                    <div className="mt-3 pl-6" onClick={(e) => e.stopPropagation()}>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">
+                        Select Subject:
+                      </label>
+                      <select
+                        value={selectedSubject}
+                        onChange={(e) => setSelectedSubject(e.target.value)}
+                        className="w-full text-xs py-1.5 px-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+                      >
+                        {monetizationPricing.subjectPricing.map((s, idx) => (
+                          <option key={s.subject_name || idx} value={s.subject_name || ''}>
+                            {s.subject_name || 'Subject'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Error notice if checkout fails */}
+              {paymentError && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300">
+                  <p className="font-semibold">Payment Notice</p>
+                  <p className="mt-0.5">{paymentError}</p>
+                </div>
+              )}
+
+              {/* Razorpay Trust Badge */}
+              <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-[11px] text-neutral-600 dark:text-neutral-400 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-medium">Secured by Razorpay • 256-bit SSL</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
+                  Instant Activation
                 </span>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30 flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsPackageModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                onClick={handleConfirmPackageSelection}
-                isLoading={processingSubscribe}
-                className="font-bold px-5"
-              >
-                Select Package
-              </Button>
+            <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30 flex items-center justify-between gap-3">
+              <span className="text-xs text-neutral-700 dark:text-neutral-300 font-bold">
+                Total: ₹{(currentPlanPricePaise / 100).toLocaleString('en-IN')}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsPackageModalOpen(false);
+                    setPaymentError(null);
+                  }}
+                  disabled={processingSubscribe}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={handleConfirmPackageSelection}
+                  isLoading={processingSubscribe}
+                  className="font-bold px-5"
+                >
+                  Proceed to Payment
+                </Button>
+              </div>
             </div>
           </div>
         </div>

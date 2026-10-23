@@ -62,14 +62,19 @@ export function Header() {
     }
 
     // 1. Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) loadUser(session);
-    });
+    supabase.auth
+      .getSession()
+      .then((res: { data: { session: any } }) => {
+        if (mounted) loadUser(res?.data?.session);
+      })
+      .catch(() => {
+        if (mounted) setLoading(false);
+      });
 
     // 2. Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       if (mounted) loadUser(session);
     });
 
@@ -115,8 +120,10 @@ export function Header() {
 
   const isTeacherRoute = pathname?.startsWith('/teacher');
   const isStudentRoute = pathname?.startsWith('/student');
+  const isParentRoute = pathname?.startsWith('/parent');
   const isTeacher = profile?.role === 'teacher' || (loading && isTeacherRoute);
   const isStudent = profile?.role === 'student' || (loading && isStudentRoute);
+  const isParent = profile?.role === 'parent' || (loading && isParentRoute);
 
   // Navigation Links based on user role
   const navLinks = isTeacher
@@ -132,6 +139,14 @@ export function Header() {
         { name: 'Search Tutor', href: '/student?tab=search' },
         { name: 'Channels', href: '/student?tab=channels' },
         { name: 'Analysis', href: '/student?tab=analysis' },
+        { name: 'Parent Requests', href: '/student?tab=parent-requests' },
+        { name: 'My Purchases', href: '/student/payments' },
+      ]
+    : isParent
+    ? [
+        { name: 'Overview', href: '/parent?tab=overview' },
+        { name: 'My Children', href: '/parent?tab=children' },
+        { name: 'Child Analysis', href: '/parent?tab=analysis' },
       ]
     : [
         { name: 'Courses', href: '/#courses' },
@@ -141,7 +156,7 @@ export function Header() {
         { name: 'For Parents', href: '/#for-parents' },
       ];
 
-  const brandLink = isTeacher ? '/teacher' : isStudent ? '/student' : '/';
+  const brandLink = isTeacher ? '/teacher' : isStudent ? '/student' : isParent ? '/parent' : '/';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/85 dark:bg-neutral-950/85 backdrop-blur-md transition-colors">

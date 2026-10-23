@@ -494,9 +494,17 @@ export const TeacherService = {
     if (params.mux_playback_id !== undefined) dbRecord.mux_playback_id = params.mux_playback_id;
     if (params.mux_duration !== undefined) dbRecord.mux_duration = params.mux_duration;
     if (params.mux_status !== undefined) dbRecord.mux_status = params.mux_status;
+    if (params.mux_error_message !== undefined) dbRecord.mux_error_message = params.mux_error_message;
 
     // Let Supabase auto-generate the UUID, then return the full row
-    const { data, error } = await supabase.from('videos').insert(dbRecord).select().single();
+    let { data, error } = await supabase.from('videos').insert(dbRecord).select().single();
+    if (error && error.code === 'PGRST204' && 'mux_error_message' in dbRecord) {
+      delete dbRecord.mux_error_message;
+      const retry = await supabase.from('videos').insert(dbRecord).select().single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) {
       console.error('Error creating video:', {
         message: error.message,
@@ -526,6 +534,31 @@ export const TeacherService = {
       .update({ mux_status: status, updated_at: new Date().toISOString() })
       .eq('id', videoId);
     if (error) console.error('Error updating mux_status:', error);
+  },
+
+  // Mux Helper: Update error status and message on an existing video
+  async updateVideoMuxError(videoId: string, errorMessage: string): Promise<void> {
+    let { error } = await supabase
+      .from('videos')
+      .update({
+        mux_status: 'errored',
+        mux_error_message: errorMessage,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', videoId);
+
+    if (error && error.code === 'PGRST204') {
+      const res = await supabase
+        .from('videos')
+        .update({
+          mux_status: 'errored',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', videoId);
+      error = res.error;
+    }
+
+    if (error) console.error('Error updating mux_error:', error);
   },
 
   // Mux Helper: Get a single video by ID

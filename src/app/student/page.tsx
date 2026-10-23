@@ -53,6 +53,7 @@ import { RecentLearningSection } from '@/components/student/recent-learning-sect
 import { ChannelAnalysisSection } from '@/components/student/channel-analysis-section';
 import { StudentTestimonialsSection } from '@/components/student/student-testimonials-section';
 import { AboutEdutechSection } from '@/components/student/about-edutech-section';
+import { StudentParentLinkingSection } from '@/components/student/student-parent-linking-section';
 
 function StudentDashboardContent() {
   const router = useRouter();
@@ -525,10 +526,21 @@ function StudentDashboardContent() {
         </div>
 
         {/* ======================================================================= */}
+        {/* VIEW: TAB === 'PARENT-REQUESTS' OR TAB === 'STUDENT-ID' */}
+        {/* ======================================================================= */}
+        {(currentTab === 'parent-requests' || currentTab === 'student-id') && (
+          <div className="space-y-6">
+            <StudentParentLinkingSection />
+          </div>
+        )}
+
+        {/* ======================================================================= */}
         {/* VIEW A: TAB === 'HOME' */}
         {/* ======================================================================= */}
         {currentTab === 'home' && (
           <div className="space-y-12">
+            {/* Student ID Card & Parent Connection Requests */}
+            <StudentParentLinkingSection />
             {!isSubscribed ? (
               /* PRE-SUBSCRIPTION FLOW:
                  Sliding Banners (rendered above)

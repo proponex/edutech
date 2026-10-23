@@ -34,6 +34,8 @@ import {
   MoreVertical,
   AlertTriangle,
   Loader2,
+  RefreshCw,
+  Play,
 } from 'lucide-react';
 import {
   ChannelItem,
@@ -109,6 +111,32 @@ export default function ChannelStudioPage({
   const [unitDeleteStage, setUnitDeleteStage] = useState<1 | 2>(1);
   const [unitDeleteInput, setUnitDeleteInput] = useState('');
   const [deletingUnit, setDeletingUnit] = useState(false);
+
+  // Reconcile stuck videos
+  const [reconcilingVideoId, setReconcilingVideoId] = useState<string | null>(null);
+
+  const reconcileVideo = async (videoId: string) => {
+    setReconcilingVideoId(videoId);
+    try {
+      const res = await fetch('/api/mux/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_id: videoId }),
+      });
+      const result = await res.json();
+      if (result.reconciled) {
+        // Video recovered — refresh the list
+        await refreshChannelAndContent();
+      } else {
+        alert(result.reason || 'Video is still processing on Mux. Please wait a few minutes.');
+      }
+    } catch (err) {
+      console.error('Reconcile failed:', err);
+      alert('Failed to check video status. Please try again.');
+    } finally {
+      setReconcilingVideoId(null);
+    }
+  };
 
   // Load Channel and Content
   const refreshChannelAndContent = useCallback(async () => {
@@ -735,14 +763,50 @@ export default function ChannelStudioPage({
 
                                     <div className="flex items-center gap-2 shrink-0">
                                       {vid.mux_status === 'processing' || vid.mux_status === 'uploading' || vid.mux_status === 'waiting' ? (
-                                        <Badge variant="outline" className="text-[10px] rounded-md text-amber-600 border-amber-300 flex items-center gap-1">
-                                          <Loader2 className="w-3 h-3 animate-spin" />
-                                          Processing
-                                        </Badge>
+                                        <>
+                                          <Badge variant="outline" className="text-[10px] rounded-md text-amber-600 border-amber-300 flex items-center gap-1">
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            Processing
+                                          </Badge>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            title="Check if Mux has finished processing"
+                                            onClick={() => reconcileVideo(vid.id)}
+                                            disabled={reconcilingVideoId === vid.id}
+                                            className="w-7 h-7 p-0 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                                          >
+                                            {reconcilingVideoId === vid.id
+                                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                              : <RefreshCw className="w-3.5 h-3.5" />}
+                                          </Button>
+                                        </>
                                       ) : vid.mux_status === 'errored' ? (
-                                        <Badge variant="outline" className="text-[10px] rounded-md text-red-600 border-red-300">
-                                          Error
-                                        </Badge>
+                                        <div className="flex items-center gap-1">
+                                          <Badge
+                                            variant="outline"
+                                            title={vid.mux_error_message || 'Video processing failed'}
+                                            className="text-[10px] rounded-md text-red-600 border-red-300 cursor-help"
+                                          >
+                                            Failed
+                                          </Badge>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            title="Check real status with Mux"
+                                            onClick={() => reconcileVideo(vid.id)}
+                                            disabled={reconcilingVideoId === vid.id}
+                                            className="w-7 h-7 p-0 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                          >
+                                            {reconcilingVideoId === vid.id ? (
+                                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                              <RefreshCw className="w-3.5 h-3.5" />
+                                            )}
+                                          </Button>
+                                        </div>
                                       ) : (
                                         <Badge
                                           variant="outline"
@@ -773,8 +837,30 @@ export default function ChannelStudioPage({
                                         {activeDotsMenuContentId === vid.id && (
                                           <div
                                             onClick={(e) => e.stopPropagation()}
-                                            className="absolute right-0 top-8 w-36 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl p-1 z-30"
+                                            className="absolute right-0 top-8 w-40 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl p-1 z-30 space-y-0.5"
                                           >
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setActiveDotsMenuContentId(null);
+                                                router.push(`/watch/video/${vid.id}?channelId=${channelId}`);
+                                              }}
+                                              className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                            >
+                                              <Play className="w-3.5 h-3.5" />
+                                              Preview Lesson
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setActiveDotsMenuContentId(null);
+                                                reconcileVideo(vid.id);
+                                              }}
+                                              className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                            >
+                                              <RefreshCw className="w-3.5 h-3.5" />
+                                              Sync Status
+                                            </button>
                                             <button
                                               type="button"
                                               onClick={() => {

@@ -34,12 +34,16 @@ export function ClassSelectorSection() {
   // Check auth state for login protection
   useEffect(() => {
     async function checkAuth() {
-      const { data } = await supabase.auth.getUser();
-      setIsAuthenticated(!!data?.user);
+      try {
+        const { data } = await supabase.auth.getUser();
+        setIsAuthenticated(!!data?.user);
+      } catch {
+        setIsAuthenticated(false);
+      }
     }
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setIsAuthenticated(!!session?.user);
     });
 

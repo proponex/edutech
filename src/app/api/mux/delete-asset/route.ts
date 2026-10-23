@@ -20,28 +20,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Get the mux_asset_id from request body
-    const body = await request.json();
-    const { mux_asset_id } = body;
+    const body = await request.json().catch(() => ({}));
+    const { mux_asset_id, mux_upload_id } = body;
 
-    if (!mux_asset_id) {
-      return NextResponse.json({ ok: true }); // Nothing to delete
+    // Cancel direct upload if requested
+    if (mux_upload_id) {
+      try {
+        await mux.video.uploads.cancel(mux_upload_id);
+        console.log(`[MUX] Cancelled direct upload session: ${mux_upload_id}`);
+      } catch (uploadErr) {
+        console.warn(`[MUX] Could not cancel upload ${mux_upload_id}:`, uploadErr);
+      }
     }
 
-    // 3. Delete the Mux asset
-    try {
-      await mux.video.assets.delete(mux_asset_id);
-      console.log(`[MUX] Deleted asset: ${mux_asset_id}`);
-    } catch (muxErr: unknown) {
-      // Asset may already be deleted or not found — log but don't fail
-      console.warn(`[MUX] Could not delete asset ${mux_asset_id}:`, muxErr);
+    // Delete asset if requested
+    if (mux_asset_id) {
+      try {
+        await mux.video.assets.delete(mux_asset_id);
+        console.log(`[MUX] Deleted asset: ${mux_asset_id}`);
+      } catch (assetErr) {
+        console.warn(`[MUX] Could not delete asset ${mux_asset_id}:`, assetErr);
+      }
     }
 
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('[MUX] Error deleting asset:', err);
+  } catch (err: unknown) {
+    console.error('[MUX] Error in delete/cancel:', err);
     return NextResponse.json(
-      { error: 'Failed to delete Mux asset.' },
+      { error: (err as Error).message || 'Failed to clean up Mux resource.' },
       { status: 500 }
     );
   }

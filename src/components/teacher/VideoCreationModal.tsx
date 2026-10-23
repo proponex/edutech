@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import NextImage from 'next/image';
+import * as UpChunk from '@mux/upchunk';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Upload,
+  Ban,
 } from 'lucide-react';
 import { VideoContentItem } from '@/types';
 import { TeacherService } from '@/lib/teacher-service';
@@ -50,6 +52,11 @@ type UploadStage =
   | 'ready'
   | 'error';
 
+// Maximum allowed video size: 5GB
+const MAX_VIDEO_BYTES = 5 * 1024 * 1024 * 1024;
+// Supported video extensions
+const VALID_VIDEO_EXTS = ['.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v'];
+
 export function VideoCreationModal({
   open,
   onOpenChange,
@@ -70,6 +77,7 @@ export function VideoCreationModal({
   const [description, setDescription] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [isDemo, setIsDemo] = useState(false);
+  const [lastSavedPublished, setLastSavedPublished] = useState(true);
 
   // Mux Upload State
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -78,10 +86,14 @@ export function VideoCreationModal({
   const [uploadStage, setUploadStage] = useState<UploadStage>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [createdVideoId, setCreatedVideoId] = useState<string | null>(null);
+  const [currentUploadId, setCurrentUploadId] = useState<string | null>(null);
 
-  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  // Refs for upload lifecycle management
+  const upchunkUploadRef = useRef<UpChunk.UpChunk | null>(null);
+  const createdVideoIdRef = useRef<string | null>(null);
+  const currentUploadIdRef = useRef<string | null>(null);
 
-  // Reset form
+  // Reset all state
   const reset = () => {
     setTitle('');
     setDescription('');
@@ -94,16 +106,42 @@ export function VideoCreationModal({
     setUploadStage('idle');
     setUploadProgress(0);
     setCreatedVideoId(null);
-    if (xhrRef.current) {
-      xhrRef.current.abort();
-      xhrRef.current = null;
+    setCurrentUploadId(null);
+    createdVideoIdRef.current = null;
+    currentUploadIdRef.current = null;
+
+    if (upchunkUploadRef.current) {
+      try {
+        upchunkUploadRef.current.abort();
+      } catch {
+        // Ignore abort errors
+      }
+      upchunkUploadRef.current = null;
     }
   };
 
-  // Video File Selection Handler
+  // Video File Selection Handler with validation
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate file size (max 5GB, min 1 byte)
+    if (file.size <= 0) {
+      setErrorMsg('The selected video file appears to be empty.');
+      return;
+    }
+
+    if (file.size > MAX_VIDEO_BYTES) {
+      setErrorMsg('Video file exceeds maximum limit of 5GB. Please select a smaller file.');
+      return;
+    }
+
+    // Validate video type / extension
+    const extMatch = VALID_VIDEO_EXTS.some((ext) => file.name.toLowerCase().endsWith(ext));
+    if (!file.type.startsWith('video/') && !extMatch) {
+      setErrorMsg('Please select a valid video file (MP4, MOV, WEBM, MKV, AVI).');
+      return;
+    }
 
     const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
     setVideoFile(file);
@@ -114,7 +152,7 @@ export function VideoCreationModal({
     setErrorMsg(null);
   };
 
-  // Thumbnail File Upload Handler (FileReader base64 preview)
+  // Thumbnail File Upload Handler
   const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -132,38 +170,84 @@ export function VideoCreationModal({
     reader.readAsDataURL(file);
   };
 
-  // Upload video directly to Mux via XHR (for progress tracking)
-  const uploadToMux = useCallback(async (file: File, uploadUrl: string): Promise<void> => {
+  // Cancel an active upload
+  const handleCancelUpload = useCallback(async () => {
+    // 1. Abort UpChunk transfer
+    if (upchunkUploadRef.current) {
+      try {
+        upchunkUploadRef.current.abort();
+      } catch {
+        // ignore
+      }
+      upchunkUploadRef.current = null;
+    }
+
+    // 2. Cancel upload on Mux
+    const uploadId = currentUploadIdRef.current;
+    if (uploadId) {
+      try {
+        await fetch('/api/mux/delete-asset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mux_upload_id: uploadId }),
+        });
+      } catch {
+        // ignore
+      }
+    }
+
+    // 3. Remove pending video record from Supabase
+    const videoId = createdVideoIdRef.current;
+    if (videoId) {
+      try {
+        await TeacherService.deleteContent('video', videoId);
+      } catch {
+        // ignore
+      }
+    }
+
+    // 4. Reset upload states
+    setUploadStage('idle');
+    setUploadProgress(0);
+    setCreatedVideoId(null);
+    setCurrentUploadId(null);
+    createdVideoIdRef.current = null;
+    currentUploadIdRef.current = null;
+    setSubmitting(false);
+    setErrorMsg('Upload was cancelled.');
+  }, []);
+
+  // Upload video using Mux UpChunk (chunked, resumable)
+  const uploadWithUpChunk = useCallback((file: File, uploadUrl: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhrRef.current = xhr;
+      try {
+        const upload = UpChunk.createUpload({
+          endpoint: uploadUrl,
+          file,
+          chunkSize: 5120, // 5MB chunks
+        });
 
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const pct = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(pct);
-        }
-      });
+        upchunkUploadRef.current = upload;
 
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
+        upload.on('progress', (progressEvent) => {
+          if (progressEvent && typeof progressEvent.detail === 'number') {
+            const pct = Math.min(100, Math.max(0, Math.round(progressEvent.detail)));
+            setUploadProgress(pct);
+          }
+        });
+
+        upload.on('success', () => {
+          upchunkUploadRef.current = null;
           resolve();
-        } else {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
-        }
-      });
+        });
 
-      xhr.addEventListener('error', () => {
-        reject(new Error('Network error during video upload.'));
-      });
-
-      xhr.addEventListener('abort', () => {
-        reject(new Error('Upload was cancelled.'));
-      });
-
-      xhr.open('PUT', uploadUrl);
-      xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
-      xhr.send(file);
+        upload.on('error', (err) => {
+          upchunkUploadRef.current = null;
+          reject(new Error(err?.detail?.message || 'Network interruption during video upload.'));
+        });
+      } catch (initErr) {
+        reject(initErr);
+      }
     });
   }, []);
 
@@ -180,12 +264,72 @@ export function VideoCreationModal({
 
     setSubmitting(true);
     setErrorMsg(null);
+    setLastSavedPublished(isPublished);
 
     try {
-      // Step 1: Create the video record in Supabase first (to get the ID for passthrough)
-      setUploadStage('preparing');
+      let activeVideoId = createdVideoIdRef.current;
+      let activeVideoRecord: VideoContentItem | null = null;
 
-      const created = await TeacherService.createVideo({
+      // Step 1: Create or reuse video record in Supabase
+      if (!activeVideoId) {
+        setUploadStage('preparing');
+
+        const created = await TeacherService.createVideo({
+          channel_id: channelId,
+          class_id: classId,
+          board_id: boardId || '',
+          subject_name: subjectName,
+          unit_id: unitId,
+          topic_id: null,
+          sub_topic_id: null,
+          scope: 'unit',
+          title: title.trim(),
+          description: description.trim() || null,
+          thumbnail_url: thumbnailUrl || null,
+          video_url: null,
+          duration_seconds: null,
+          is_demo: isDemo,
+          is_published: isPublished,
+          mux_status: 'waiting',
+        });
+
+        activeVideoId = created.id;
+        activeVideoRecord = created;
+        setCreatedVideoId(created.id);
+        createdVideoIdRef.current = created.id;
+      }
+
+      // Step 2: Request Mux Direct Upload from server
+      setUploadStage('preparing');
+      const uploadRes = await fetch('/api/mux/create-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_id: activeVideoId }),
+      });
+
+      if (!uploadRes.ok) {
+        const errData = await uploadRes.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to create Mux direct upload session.');
+      }
+
+      const { upload_url, upload_id } = await uploadRes.json();
+      setCurrentUploadId(upload_id);
+      currentUploadIdRef.current = upload_id;
+
+      // Step 3: Direct upload to Mux using UpChunk
+      setUploadStage('uploading');
+      setUploadProgress(0);
+      await uploadWithUpChunk(videoFile, upload_url);
+
+      // Step 4: File transfer complete! Mux is now encoding the video
+      setUploadStage('processing');
+
+      // Update Supabase status to processing
+      await TeacherService.updateVideoMuxStatus(activeVideoId, 'processing');
+
+      // Step 5: Notify parent component with complete record
+      const finalItem: VideoContentItem = activeVideoRecord || {
+        id: activeVideoId,
         channel_id: channelId,
         class_id: classId,
         board_id: boardId || '',
@@ -201,60 +345,20 @@ export function VideoCreationModal({
         duration_seconds: null,
         is_demo: isDemo,
         is_published: isPublished,
-        mux_status: 'waiting',
-      });
-
-      setCreatedVideoId(created.id);
-
-      // Step 2: Create Mux Direct Upload (server-side API call)
-      const uploadRes = await fetch('/api/mux/create-upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ video_id: created.id }),
-      });
-
-      if (!uploadRes.ok) {
-        const errData = await uploadRes.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to create upload session.');
-      }
-
-      const { upload_url, upload_id } = await uploadRes.json();
-
-      // Step 3: Save the upload_id to Supabase
-      await TeacherService.updateVideoMuxUploadId(created.id, upload_id);
-
-      // Step 4: Upload video directly to Mux
-      setUploadStage('uploading');
-      await uploadToMux(videoFile, upload_url);
-
-      // Step 5: Upload complete — Mux will now process the video
-      setUploadStage('processing');
-
-      // Update mux_status in Supabase
-      await TeacherService.updateVideoMuxStatus(created.id, 'processing');
-
-      // Notify parent and close
-      onSuccess({
-        ...created,
         mux_upload_id: upload_id,
         mux_status: 'processing',
-      });
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      onSuccess(finalItem);
       reset();
       onOpenChange(false);
-    } catch (err: unknown) {
-      console.error('Failed to upload video', err);
-      setUploadStage('error');
-      setErrorMsg((err as Error).message || 'Failed to upload video. Please try again.');
 
-      // If we created a video record but upload failed, clean it up
-      if (createdVideoId) {
-        try {
-          await TeacherService.deleteContent('video', createdVideoId);
-        } catch {
-          // Ignore cleanup errors
-        }
-        setCreatedVideoId(null);
-      }
+    } catch (err: unknown) {
+      console.error('[VideoCreationModal] Upload failed:', err);
+      setUploadStage('error');
+      setErrorMsg((err as Error).message || 'Failed to complete video upload. You can retry safely.');
     } finally {
       setSubmitting(false);
     }
@@ -264,17 +368,31 @@ export function VideoCreationModal({
 
   const getUploadStatusText = () => {
     switch (uploadStage) {
-      case 'preparing': return 'Preparing upload...';
-      case 'uploading': return `Uploading ${uploadProgress}%`;
-      case 'processing': return 'Processing video...';
-      case 'ready': return 'Video ready ✓';
-      case 'error': return 'Upload failed';
-      default: return '';
+      case 'preparing':
+        return 'Requesting secure upload session...';
+      case 'uploading':
+        return `Transferring file: ${uploadProgress}%`;
+      case 'processing':
+        return 'Upload complete. Mux is encoding video...';
+      case 'ready':
+        return 'Video ready ✓';
+      case 'error':
+        return 'Upload failed';
+      default:
+        return '';
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!isUploading) onOpenChange(o); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        // Block closing during upload without explicit cancellation
+        if (!isUploading) {
+          onOpenChange(o);
+        }
+      }}
+    >
       <DialogContent className="max-w-2xl w-full p-0 overflow-hidden rounded-3xl bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 shadow-2xl">
         <DialogHeader className="p-6 pb-4 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between">
@@ -287,7 +405,7 @@ export function VideoCreationModal({
                   Add Video Lesson
                 </DialogTitle>
                 <p className="text-xs text-neutral-500">
-                  Upload a lesson directly into this unit
+                  Upload directly to Mux for instant adaptive streaming
                 </p>
               </div>
             </div>
@@ -314,7 +432,14 @@ export function VideoCreationModal({
           {errorMsg && (
             <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex items-start gap-2.5 text-red-700 dark:text-red-400 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="flex-1">{errorMsg}</div>
+              <div className="flex-1 space-y-1">
+                <p className="font-semibold">{errorMsg}</p>
+                {uploadStage === 'error' && (
+                  <p className="text-[11px] text-red-600 dark:text-red-300">
+                    Your details are preserved. Click &quot;Retry Upload&quot; below to continue without duplicate records.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -327,7 +452,7 @@ export function VideoCreationModal({
               id="videoTitle"
               placeholder="e.g. Introduction to Electric Charge & Coulomb's Law"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value)}
               className="rounded-xl h-11 text-sm border-neutral-200 dark:border-neutral-800"
               disabled={isUploading}
             />
@@ -343,7 +468,7 @@ export function VideoCreationModal({
               rows={3}
               placeholder="Summary of topics covered, derivations, examples, and homework references..."
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value)}
               className="rounded-xl text-xs leading-relaxed border-neutral-200 dark:border-neutral-800"
               disabled={isUploading}
             />
@@ -361,26 +486,30 @@ export function VideoCreationModal({
                   Click to Select Video File
                 </span>
                 <span className="text-[11px] text-neutral-400 mt-0.5">
-                  MP4, MOV, WEBM, MKV — Uploads directly to Mux
+                  MP4, MOV, WEBM, MKV — Direct Mux Resumable Upload (up to 5GB)
                 </span>
                 <input
                   type="file"
-                  accept="video/*"
+                  accept="video/*,.mkv,.mp4,.mov,.webm"
                   className="hidden"
                   onChange={handleVideoSelect}
                 />
               </label>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      uploadStage === 'error'
-                        ? 'bg-red-100 dark:bg-red-950/60 text-red-600'
-                        : uploadStage === 'ready'
-                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600'
-                        : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600'
-                    }`}>
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        uploadStage === 'error'
+                          ? 'bg-red-100 dark:bg-red-950/60 text-red-600'
+                          : uploadStage === 'processing'
+                          ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-600'
+                          : uploadStage === 'ready'
+                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600'
+                          : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600'
+                      }`}
+                    >
                       {uploadStage === 'error' ? (
                         <AlertCircle className="w-5 h-5" />
                       ) : uploadStage === 'ready' ? (
@@ -400,13 +529,14 @@ export function VideoCreationModal({
                       </p>
                     </div>
                   </div>
+
                   {!isUploading && (
                     <label className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-600 cursor-pointer">
                       <RefreshCw className="w-3.5 h-3.5" />
                       Replace
                       <input
                         type="file"
-                        accept="video/*"
+                        accept="video/*,.mkv,.mp4,.mov,.webm"
                         className="hidden"
                         onChange={handleVideoSelect}
                       />
@@ -414,14 +544,27 @@ export function VideoCreationModal({
                   )}
                 </div>
 
-                {/* Upload Progress Bar */}
+                {/* Upload & Processing Progress Bar */}
                 {isUploading && (
-                  <div className="space-y-1.5">
-                    <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-neutral-50/80 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-neutral-700 dark:text-neutral-300">
+                        {uploadStage === 'uploading'
+                          ? 'Transferring File to Mux'
+                          : uploadStage === 'processing'
+                          ? 'Mux Processing & Encoding'
+                          : 'Preparing Session'}
+                      </span>
+                      <span className="text-neutral-500">
+                        {uploadStage === 'uploading' ? `${uploadProgress}%` : uploadStage === 'processing' ? 'Encoding' : ''}
+                      </span>
+                    </div>
+
+                    <div className="w-full h-2.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
                           uploadStage === 'processing'
-                            ? 'bg-amber-500 animate-pulse w-full'
+                            ? 'bg-blue-500 animate-pulse w-full'
                             : 'bg-emerald-500'
                         }`}
                         style={{
@@ -429,24 +572,40 @@ export function VideoCreationModal({
                         }}
                       />
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-                      {uploadStage === 'preparing' && (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Preparing upload session...</span>
-                        </>
-                      )}
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+                        {uploadStage === 'preparing' && (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                            <span>Creating Direct Upload session with Mux...</span>
+                          </>
+                        )}
+                        {uploadStage === 'uploading' && (
+                          <>
+                            <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Uploading video chunks ({uploadProgress}%)...</span>
+                          </>
+                        )}
+                        {uploadStage === 'processing' && (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                            <span>File transfer complete. Mux is generating HLS streams...</span>
+                          </>
+                        )}
+                      </div>
+
                       {uploadStage === 'uploading' && (
-                        <>
-                          <Upload className="w-3 h-3" />
-                          <span>Uploading to Mux... {uploadProgress}%</span>
-                        </>
-                      )}
-                      {uploadStage === 'processing' && (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Upload complete — Mux is processing your video...</span>
-                        </>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelUpload}
+                          className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg flex items-center gap-1 font-semibold"
+                        >
+                          <Ban className="w-3 h-3" />
+                          Cancel Upload
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -458,16 +617,16 @@ export function VideoCreationModal({
           {/* Thumbnail File Upload */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-              Thumbnail
+              Thumbnail (Optional)
             </Label>
             {!thumbnailUrl ? (
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl p-6 cursor-pointer transition-colors bg-neutral-50/50 dark:bg-neutral-800/30">
-                <ImageIcon className="w-8 h-8 text-neutral-400 mb-2" />
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl p-5 cursor-pointer transition-colors bg-neutral-50/50 dark:bg-neutral-800/30">
+                <ImageIcon className="w-7 h-7 text-neutral-400 mb-1.5" />
                 <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
-                  Upload Thumbnail Image
+                  Upload Custom Thumbnail
                 </span>
                 <span className="text-[11px] text-neutral-400 mt-0.5">
-                  JPG, PNG or WEBP (Max 3MB)
+                  JPG, PNG or WEBP (If omitted, Mux auto-generates poster)
                 </span>
                 <input
                   type="file"
@@ -519,7 +678,7 @@ export function VideoCreationModal({
               type="checkbox"
               id="isDemo"
               checked={isDemo}
-              onChange={e => setIsDemo(e.target.checked)}
+              onChange={(e) => setIsDemo(e.target.checked)}
               className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-neutral-300"
               disabled={isUploading}
             />
@@ -537,40 +696,58 @@ export function VideoCreationModal({
             type="button"
             variant="ghost"
             onClick={() => {
-              reset();
-              onOpenChange(false);
+              if (uploadStage === 'uploading') {
+                handleCancelUpload();
+              } else {
+                reset();
+                onOpenChange(false);
+              }
             }}
-            disabled={isUploading}
+            disabled={uploadStage === 'preparing'}
             className="rounded-xl text-xs font-semibold"
           >
-            Cancel
+            {uploadStage === 'uploading' ? 'Cancel Upload' : 'Close'}
           </Button>
 
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleSave(false)}
-              disabled={submitting || isUploading}
-              className="rounded-xl text-xs font-semibold"
-            >
-              Save Draft
-            </Button>
-            <Button
-              type="button"
-              onClick={() => handleSave(true)}
-              disabled={submitting || isUploading}
-              className="rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  {getUploadStatusText() || 'Uploading...'}
-                </>
-              ) : (
-                'Upload & Publish'
-              )}
-            </Button>
+            {uploadStage === 'error' ? (
+              <Button
+                type="button"
+                onClick={() => handleSave(lastSavedPublished)}
+                disabled={submitting}
+                className="rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                Retry Upload
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleSave(false)}
+                  disabled={submitting || isUploading}
+                  className="rounded-xl text-xs font-semibold"
+                >
+                  Save Draft
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleSave(true)}
+                  disabled={submitting || isUploading}
+                  className="rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                      {getUploadStatusText() || 'Uploading...'}
+                    </>
+                  ) : (
+                    'Upload & Publish'
+                  )}
+                </Button>
+              </>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

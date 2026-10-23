@@ -252,6 +252,13 @@ export default function SignUpPage() {
             preferred_language: selectedLanguage || null,
             subjects: selectedSubjects,
           });
+
+          // Generate and persist permanent Student ID (ED-YYYY-NNNNNN)
+          await fetch('/api/student/register-id', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: data.user.id }),
+          }).catch((err) => console.warn('Student ID pre-generation deferred:', err));
         } catch (e) {
           console.error('Error saving academic profile', e);
         }

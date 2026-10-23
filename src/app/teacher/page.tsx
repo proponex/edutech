@@ -40,6 +40,8 @@ import {
   ChannelStudentInfo,
 } from '@/types';
 import { TeacherService } from '@/lib/teacher-service';
+import { TeacherPricingManager } from '@/components/teacher/TeacherPricingManager';
+import { TeacherEarningsManager } from '@/components/teacher/TeacherEarningsManager';
 
 function StudentMessageComposer({
   channelId,
@@ -503,14 +505,25 @@ function TeacherDashboardContent() {
           </Link>
 
           <Link
-            href="/teacher?tab=payout"
-            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
-              currentTab === 'payout'
+            href="/teacher?tab=monetization"
+            className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+              currentTab === 'monetization'
                 ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                 : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
-            Payout
+            Monetization &amp; Pricing
+          </Link>
+
+          <Link
+            href="/teacher?tab=earnings"
+            className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+              currentTab === 'earnings' || currentTab === 'payout'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            Earnings &amp; Ledger
           </Link>
         </div>
 
@@ -1093,61 +1106,17 @@ function TeacherDashboardContent() {
         )}
 
         {/* ======================================================================= */}
-        {/* TAB 4: PAYOUT TAB */}
+        {/* TAB 4: MONETIZATION & PRICING TAB */}
         {/* ======================================================================= */}
-        {currentTab === 'payout' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white font-display">
-                Teacher Payouts &amp; Revenue
-              </h2>
-              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-                Monthly revenue generated through active student subscriptions and packages.
-              </p>
-            </div>
+        {currentTab === 'monetization' && (
+          <TeacherPricingManager channels={channels} />
+        )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-6 sm:p-8 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-                    Calculated Monthly Payout
-                  </span>
-                  <CreditCard className="w-5 h-5 text-emerald-500" />
-                </div>
-                <div className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400 font-display">
-                  ₹{stats.thisMonthPayment.toLocaleString('en-IN')}
-                </div>
-                <p className="text-xs text-neutral-500 leading-relaxed">
-                  Payouts are settled on the 1st of every calendar month directly to your verified educator bank account.
-                </p>
-                <div className="pt-2">
-                  <Badge variant="success" className="text-xs">
-                    Direct Deposit Active
-                  </Badge>
-                </div>
-              </Card>
-
-              <Card className="p-6 sm:p-8 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl space-y-4">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white font-display">
-                  Package Pricing Reference
-                </h3>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200/60 dark:border-neutral-800">
-                    <span className="font-semibold">Entire Channel Package</span>
-                    <strong className="text-neutral-900 dark:text-white">₹999 / mo</strong>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200/60 dark:border-neutral-800">
-                    <span className="font-semibold">Particular Class Package</span>
-                    <strong className="text-neutral-900 dark:text-white">₹699 / mo</strong>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200/60 dark:border-neutral-800">
-                    <span className="font-semibold">Class + Subject Package</span>
-                    <strong className="text-neutral-900 dark:text-white">₹499 / mo</strong>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
+        {/* ======================================================================= */}
+        {/* TAB 5: EARNINGS & REVENUE LEDGER TAB */}
+        {/* ======================================================================= */}
+        {(currentTab === 'earnings' || currentTab === 'payout') && (
+          <TeacherEarningsManager />
         )}
       </main>
     </div>
