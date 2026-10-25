@@ -139,7 +139,6 @@ export function Header() {
         { name: 'Search Tutor', href: '/student?tab=search' },
         { name: 'Channels', href: '/student?tab=channels' },
         { name: 'Analysis', href: '/student?tab=analysis' },
-        { name: 'Parent Requests', href: '/student?tab=parent-requests' },
         { name: 'My Purchases', href: '/student/payments' },
       ]
     : isParent

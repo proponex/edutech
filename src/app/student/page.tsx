@@ -33,6 +33,9 @@ import {
   Search,
   Tv,
   ArrowRight,
+  IdCard,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   Profile,
@@ -54,6 +57,7 @@ import { ChannelAnalysisSection } from '@/components/student/channel-analysis-se
 import { StudentTestimonialsSection } from '@/components/student/student-testimonials-section';
 import { AboutEdutechSection } from '@/components/student/about-edutech-section';
 import { StudentParentLinkingSection } from '@/components/student/student-parent-linking-section';
+import { StudentLiveSection } from '@/components/student/StudentLiveSection';
 
 function StudentDashboardContent() {
   const router = useRouter();
@@ -66,6 +70,8 @@ function StudentDashboardContent() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [academicProfile, setAcademicProfile] = useState<StudentAcademicProfile | null>(null);
   const [academicHistory, setAcademicHistory] = useState<StudentAcademicProfile[]>([]);
+  const [studentId, setStudentId] = useState<string>('');
+  const [copiedStudentId, setCopiedStudentId] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Subscriptions & Learning State (Phase 5.3)
@@ -192,18 +198,27 @@ function StudentDashboardContent() {
         setAllBoards(bds);
         setReferenceSubjects(subs);
 
-        // Fetch profile and academic history
-        const [prof, acad, hist, activeSubs, recent, subjectsAnalysis] = await Promise.all([
+        // Fetch profile, academic history, and student ID
+        const [prof, acad, hist, activeSubs, recent, subjectsAnalysis, myIdData] = await Promise.all([
           StudentService.getStudentProfile(user.id),
           StudentService.getStudentAcademicProfile(user.id),
           StudentService.getStudentAcademicHistory(user.id),
           StudentService.getStudentActiveSubscriptions(user.id),
           StudentService.getStudentRecentLearning(user.id),
           StudentService.getStudentSubscribedSubjectsAnalysis(user.id),
+          fetch('/api/student/my-id').then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ]);
 
+        const assignedStudentId = myIdData?.student_id_code || prof?.student_id_code || '';
+        if (assignedStudentId) {
+          setStudentId(assignedStudentId);
+        }
+
         if (prof) {
-          setProfile(prof);
+          setProfile({
+            ...prof,
+            student_id_code: assignedStudentId || prof.student_id_code,
+          });
           setEditName(prof.name || '');
           setEditPhone(prof.phone || '');
           setEditParentPhone(prof.parent_phone || '');
@@ -329,6 +344,33 @@ function StudentDashboardContent() {
     }
   };
 
+  // Copy Student ID Helper for Profile Modal
+  const handleCopyStudentId = async () => {
+    const idToCopy = studentId || profile?.student_id_code;
+    if (!idToCopy) return;
+    try {
+      await navigator.clipboard.writeText(idToCopy);
+      setCopiedStudentId(true);
+      setTimeout(() => setCopiedStudentId(false), 2000);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = idToCopy;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopiedStudentId(true);
+      setTimeout(() => setCopiedStudentId(false), 2000);
+    }
+  };
+
+  // Redirect legacy parent-requests tab to home since requests are handled directly on home page
+  useEffect(() => {
+    if (currentTab === 'parent-requests' || currentTab === 'student-id') {
+      router.replace('/student');
+    }
+  }, [currentTab, router]);
+
   // Save Profile Details
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -433,23 +475,6 @@ function StudentDashboardContent() {
     <div className="min-h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors">
       <Header />
 
-      {/* ======================================================================= */}
-      {/* 1. TOP HERO AREA: SLIDING BANNERS (PRE-SUBSCRIPTION) VS RECENT LEARNING (POST-SUBSCRIPTION) */}
-      {/* ======================================================================= */}
-      {currentTab === 'home' && (
-        <div className="w-full border-b border-neutral-200/60 dark:border-neutral-800/60">
-          {!isSubscribed ? (
-            /* PRE-SUBSCRIPTION: Sliding Banners */
-            <HeroCarousel />
-          ) : (
-            /* POST-SUBSCRIPTION: Replace banner area with Recent Learning section */
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              <RecentLearningSection learning={recentLearning} />
-            </div>
-          )}
-        </div>
-      )}
-
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
         {/* TOP GREETING BAR WITH AVATAR & LOGOUT */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-neutral-200/80 dark:border-neutral-800/80">
@@ -526,11 +551,14 @@ function StudentDashboardContent() {
         </div>
 
         {/* ======================================================================= */}
-        {/* VIEW: TAB === 'PARENT-REQUESTS' OR TAB === 'STUDENT-ID' */}
+        {/* VIEW: TAB === 'PARENT-REQUESTS' OR TAB === 'STUDENT-ID' (FALLBACK) */}
         {/* ======================================================================= */}
         {(currentTab === 'parent-requests' || currentTab === 'student-id') && (
           <div className="space-y-6">
-            <StudentParentLinkingSection />
+            <StudentParentLinkingSection
+              initialStudentId={studentId}
+              onStudentIdLoaded={(id) => setStudentId(id)}
+            />
           </div>
         )}
 
@@ -538,24 +566,26 @@ function StudentDashboardContent() {
         {/* VIEW A: TAB === 'HOME' */}
         {/* ======================================================================= */}
         {currentTab === 'home' && (
-          <div className="space-y-12">
-            {/* Student ID Card & Parent Connection Requests */}
-            <StudentParentLinkingSection />
+          <div className="space-y-10">
+            {/* 1. TOP SECTION: Student ID (Left Corner) & Parent Requests (Right Side) */}
+            <StudentParentLinkingSection
+              initialStudentId={studentId}
+              onStudentIdLoaded={(id) => setStudentId(id)}
+            />
+
+            {/* 2. BELOW TOP SECTION: Content He Last Watched / Recent Learning */}
+            {recentLearning && (
+              <RecentLearningSection learning={recentLearning} />
+            )}
+
             {!isSubscribed ? (
-              /* PRE-SUBSCRIPTION FLOW:
-                 Sliding Banners (rendered above)
-                 ↓
-                 Help Me Find My Tutor
-                 ↓
-                 Class 1 → Class 12 + Results
-                 ↓
-                 Testimonials
-                 ↓
-                 About Edutech
-                 ↓
-                 Footer
-              */
+              /* PRE-SUBSCRIPTION FLOW */
               <>
+                {/* Sliding Banners */}
+                <div className="rounded-3xl overflow-hidden shadow-sm border border-neutral-200/80 dark:border-neutral-800/80">
+                  <HeroCarousel />
+                </div>
+
                 {/* 1. Help Me Find My Tutor (6 Questions) */}
                 <HelpMeFindMyTutor
                   allClasses={allClasses}
@@ -742,6 +772,9 @@ function StudentDashboardContent() {
                  Footer
               */
               <>
+                {/* Live Classes — shown first so students see active sessions immediately */}
+                <StudentLiveSection />
+
                 {/* Channel Analysis: Show only the subjects subscribed to */}
                 <ChannelAnalysisSection subjects={subscribedSubjects} />
 
@@ -1255,6 +1288,54 @@ function StudentDashboardContent() {
 
               {/* Editable Profile Fields */}
               <form id="student-profile-form" onSubmit={handleSaveProfile} className="space-y-4">
+                {/* Permanent Student ID (Cannot be changed) */}
+                <div className="flex flex-col gap-1.5 p-3.5 rounded-2xl border border-primary-200/80 dark:border-primary-900/60 bg-gradient-to-r from-primary-50/60 via-amber-50/30 to-transparent dark:from-neutral-800/80 dark:via-neutral-900 dark:to-neutral-900">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="student-profile-id" className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                      <IdCard className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                      <span>Student ID</span>
+                    </label>
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-700">
+                      Cannot be changed
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="student-profile-id"
+                      name="student_id"
+                      type="text"
+                      disabled
+                      readOnly
+                      value={studentId || profile?.student_id_code || 'Loading ID...'}
+                      className="w-full px-3.5 py-2 text-sm font-mono font-bold tracking-wider rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 cursor-not-allowed select-all"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyStudentId}
+                      disabled={!studentId && !profile?.student_id_code}
+                      className="shrink-0 text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-xl"
+                      title="Copy Student ID"
+                    >
+                      {copiedStudentId ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Official permanent student identifier. It cannot be altered and is used by parents to connect.
+                  </p>
+                </div>
+
                 <Input
                   label="Full Name"
                   id="student-full-name"

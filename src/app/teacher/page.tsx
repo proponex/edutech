@@ -42,6 +42,7 @@ import {
 import { TeacherService } from '@/lib/teacher-service';
 import { TeacherPricingManager } from '@/components/teacher/TeacherPricingManager';
 import { TeacherEarningsManager } from '@/components/teacher/TeacherEarningsManager';
+import { TeacherLiveSection } from '@/components/teacher/TeacherLiveSection';
 
 function StudentMessageComposer({
   channelId,
@@ -478,6 +479,18 @@ function TeacherDashboardContent() {
           </Link>
 
           <Link
+            href="/teacher?tab=live"
+            className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+              currentTab === 'live'
+                ? 'border-red-500 text-red-600 dark:text-red-400'
+                : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            Live Classes
+          </Link>
+
+          <Link
             href="/teacher?tab=students"
             className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
               currentTab === 'students'
@@ -529,6 +542,18 @@ function TeacherDashboardContent() {
 
         {/* ======================================================================= */}
         {/* TAB 1: MAIN DASHBOARD — MY CHANNELS LIST */}
+        {/* ======================================================================= */}
+        {/* LIVE TAB */}
+        {/* ======================================================================= */}
+        {currentTab === 'live' && profile && (
+          <div className="space-y-6">
+            <TeacherLiveSection
+              teacherId={profile.id}
+              channels={channels}
+            />
+          </div>
+        )}
+
         {/* ======================================================================= */}
         {currentTab === 'dashboard' && (
           <div className="space-y-6">

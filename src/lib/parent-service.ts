@@ -65,7 +65,7 @@ export class ParentService {
     // 4. Check existing relationship in parent_students
     const { data: existingRows } = await supabase
       .from('parent_students')
-      .select('id, status, relationship_type')
+      .select('*')
       .eq('parent_id', parentId)
       .eq('student_id', student.id);
 
@@ -105,31 +105,28 @@ export class ParentService {
 
     if (insertErr) {
       // Check if status column was rejected by DB schema cache; retry without status column if needed
-      if (insertErr.message && insertErr.message.includes('status')) {
-        const retryPayload = {
-          parent_id: parentId,
-          student_id: student.id,
-          relationship_type: `${relLabel} [status:pending]`,
-          created_at: new Date().toISOString(),
-        };
-        const { data: retryRel, error: retryErr } = await supabase
-          .from('parent_students')
-          .insert(retryPayload)
-          .select('id')
-          .single();
+      const retryPayload = {
+        parent_id: parentId,
+        student_id: student.id,
+        relationship_type: `${relLabel} [status:pending]`,
+        created_at: new Date().toISOString(),
+      };
+      const { data: retryRel, error: retryErr } = await supabase
+        .from('parent_students')
+        .insert(retryPayload)
+        .select('id')
+        .single();
 
-        if (retryErr) {
-          throw new Error(`Failed to create connection request: ${retryErr.message}`);
-        }
-        return {
-          success: true,
-          requestId: retryRel.id,
-          studentName: student.name,
-          studentIdCode: normalizedId,
-          status: 'pending',
-        };
+      if (retryErr) {
+        throw new Error(`Failed to create connection request: ${retryErr.message}`);
       }
-      throw new Error(`Failed to create connection request: ${insertErr.message}`);
+      return {
+        success: true,
+        requestId: retryRel.id,
+        studentName: student.name,
+        studentIdCode: normalizedId,
+        status: 'pending',
+      };
     }
 
     return {
@@ -242,17 +239,29 @@ export class ParentService {
     }
 
     // Try update status to cancelled or delete
-    try {
-      await supabase
+    const cleanLabel = this.parseRelationshipLabel(req.relationship_type);
+    const updatedRelType = `${cleanLabel} [status:cancelled]`;
+
+    const { error: fullErr } = await supabase
+      .from('parent_students')
+      .update({
+        status: 'cancelled',
+        relationship_type: updatedRelType,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
+
+    if (fullErr) {
+      const { error: relErr } = await supabase
         .from('parent_students')
         .update({
-          status: 'cancelled',
-          relationship_type: `${this.parseRelationshipLabel(req.relationship_type)} [status:cancelled]`,
-          updated_at: new Date().toISOString(),
+          relationship_type: updatedRelType,
         })
         .eq('id', requestId);
-    } catch {
-      await supabase.from('parent_students').delete().eq('id', requestId);
+
+      if (relErr) {
+        await supabase.from('parent_students').delete().eq('id', requestId);
+      }
     }
 
     return true;
@@ -660,31 +669,57 @@ export class ParentService {
     const cleanLabel = this.parseRelationshipLabel(request.relationship_type);
     const updatedRelType = `${cleanLabel} [status:${newStatus}]`;
 
-    // Try update with status column and encoded label
-    try {
-      const { error: updateErr } = await supabase
+    // 2. Perform robust update:
+    // Attempt 1: Full payload (if DB table has dedicated status & audit columns)
+    const { error: fullErr } = await supabase
+      .from('parent_students')
+      .update({
+        status: newStatus,
+        relationship_type: updatedRelType,
+        responded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
+
+    if (fullErr) {
+      // Attempt 2: Try without responded_at/updated_at
+      const { error: statusErr } = await supabase
         .from('parent_students')
         .update({
           status: newStatus,
           relationship_type: updatedRelType,
-          responded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         })
         .eq('id', requestId);
 
-      if (updateErr) {
-        // Fallback update without status column if schema cache lacks status
-        await supabase
+      if (statusErr) {
+        // Attempt 3: Schema only has relationship_type column
+        const { error: relErr } = await supabase
           .from('parent_students')
           .update({
             relationship_type: updatedRelType,
-            responded_at: new Date().toISOString(),
           })
           .eq('id', requestId);
+
+        if (relErr) {
+          console.error('[respondToConnectionRequest] Update error:', relErr);
+          throw new Error(`Failed to update request: ${relErr.message}`);
+        }
       }
-    } catch (e) {
-      console.error('Error updating parent_students:', e);
-      throw new Error('Failed to update connection request status.');
+    }
+
+    // 3. Verify row was actually updated in the database
+    const { data: verifyRow, error: verifyErr } = await supabase
+      .from('parent_students')
+      .select('*')
+      .eq('id', requestId)
+      .single();
+
+    if (!verifyErr && verifyRow) {
+      const verifiedStatus = this.parseStatus(verifyRow);
+      if (verifiedStatus !== newStatus) {
+        console.error('[respondToConnectionRequest] Status verification failed:', verifyRow);
+        throw new Error('Failed to update connection request status in database.');
+      }
     }
 
     return {

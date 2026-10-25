@@ -764,6 +764,45 @@ export const StudentService = {
   async getStudentRecentLearning(studentId: string): Promise<StudentRecentLearning | null> {
     try {
       const subs = await this.getStudentActiveSubscriptions(studentId);
+
+      // Check if student has active progress in student_content_progress
+      const { data: latestProgress } = await supabase
+        .from('student_content_progress')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestProgress?.channel_id) {
+        const matchingSub = subs.find(s => s.subscription.channel_id === latestProgress.channel_id);
+        const targetChannel = matchingSub?.channel || await TeacherService.getChannelById(latestProgress.channel_id);
+        if (targetChannel) {
+          const prog = await this.getStudentProgress(studentId, targetChannel.id);
+          let teacher: Profile | null = matchingSub?.teacher || null;
+          if (!teacher && targetChannel.teacher_id) {
+            try {
+              const { data: tProf } = await supabase.from('profiles').select('*').eq('id', targetChannel.teacher_id).single();
+              if (tProf) teacher = tProf as Profile;
+            } catch {}
+          }
+          return {
+            channelId: targetChannel.id,
+            channelName: targetChannel.name,
+            channelDescription: targetChannel.description || '',
+            channelPhotoUrl: targetChannel.photo_url || null,
+            className: targetChannel.class?.name || (targetChannel.classes && targetChannel.classes[0]?.name) || '',
+            subjectName: matchingSub?.subscription?.subject_name || (targetChannel.specializations && targetChannel.specializations[0]) || '',
+            teacherName: teacher?.name || 'Educator',
+            teacherPhotoUrl: teacher?.photo_url || null,
+            teacherEmail: teacher?.email || '',
+            overallPercentage: prog.overall.percentage,
+            totalItems: prog.overall.total,
+            completedItems: prog.overall.completed,
+          };
+        }
+      }
+
       if (subs.length === 0) return null;
 
       // Pick the most recent subscription

@@ -26,7 +26,7 @@ export function RecentLearningSection({ learning }: RecentLearningSectionProps) 
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
             <span className="text-xs font-bold uppercase tracking-wider text-primary-900 dark:text-primary-300">
-              Recent Learning
+              Recent Learning • Last Watched
             </span>
           </div>
           <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
@@ -129,7 +129,7 @@ export function RecentLearningSection({ learning }: RecentLearningSectionProps) 
                     className="w-full font-bold shadow-md shadow-primary-500/20 flex items-center justify-center gap-2 py-3"
                   >
                     <PlayCircle className="w-5 h-5" />
-                    Continue Learning
+                    Continue Watching
                   </Button>
                 </Link>
               </div>

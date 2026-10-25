@@ -972,3 +972,70 @@ export interface TeacherMonetizationOverview {
     expiresAt?: string;
   }>;
 }
+
+// ==============================================================================
+// LIVE STREAMING TYPES
+// ==============================================================================
+
+export type LiveSessionStatus = 'scheduled' | 'starting' | 'live' | 'idle' | 'ended' | 'errored';
+export type LiveRecordingStatus = 'none' | 'processing' | 'ready' | 'errored';
+
+export interface LiveSession {
+  id: string;
+  teacher_id: string;
+  channel_id: string;
+  title: string;
+  description: string | null;
+  subject_name: string | null;
+  unit_id: string | null;
+  status: LiveSessionStatus;
+  scheduled_start_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  // Mux fields — stream_key is NEVER included in student-facing queries
+  mux_live_stream_id: string | null;
+  mux_playback_id: string | null;
+  // Recording
+  mux_recording_asset_id: string | null;
+  mux_recording_playback_id: string | null;
+  recording_status: LiveRecordingStatus;
+  // Stats
+  viewer_count: number;
+  chat_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined fields (populated by service)
+  teacher?: {
+    id: string;
+    name: string;
+    email: string;
+    photo_url: string | null;
+  };
+  channel?: {
+    id: string;
+    name: string;
+    photo_url: string | null;
+  };
+}
+
+// Teacher-only view includes the stream key for broadcasting
+export interface LiveSessionTeacherView extends LiveSession {
+  mux_stream_key: string | null;
+  mux_stream_key_id: string | null;
+}
+
+export interface LiveChatMessage {
+  id: string;
+  session_id: string;
+  sender_id: string;
+  sender_role: 'teacher' | 'student';
+  message: string;
+  is_deleted: boolean;
+  created_at: string;
+  // Joined
+  sender?: {
+    id: string;
+    name: string;
+    photo_url: string | null;
+  };
+}

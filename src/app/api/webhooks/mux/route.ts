@@ -107,8 +107,6 @@ export async function POST(request: NextRequest) {
   if (webhookSecret) {
     try {
       // In @mux/mux-node v15, unwrap is ASYNC and MUST be awaited.
-      // It inspects the 'mux-signature' header, checks timestamp tolerance,
-      // and performs timing-safe HMAC SHA256 signature verification.
       event = (await mux.webhooks.unwrap(rawBody, request.headers, webhookSecret)) as unknown as MuxWebhookPayload;
     } catch (verifyErr) {
       console.error('[MUX Webhook] Signature verification failed:', (verifyErr as Error)?.message || verifyErr);
@@ -135,12 +133,88 @@ export async function POST(request: NextRequest) {
   console.log(`[MUX Webhook] Verified event received: ${eventType}`);
 
   try {
+
     // =========================================================================
+    // LIVE STREAMING EVENTS
+    // =========================================================================
+
+    // EVENT: video.live_stream.active
+    // Fired when a broadcaster connects and the stream becomes live.
+    if (eventType === 'video.live_stream.active') {
+      const streamId = data.id as string;
+      console.log(`[MUX Webhook] live_stream.active | stream=${streamId}`);
+
+      if (streamId) {
+        const { error: updateErr } = await supabase
+          .from('live_sessions')
+          .update({ status: 'live', started_at: now, updated_at: now })
+          .eq('mux_live_stream_id', streamId)
+          .in('status', ['starting', 'idle', 'scheduled']);
+
+        if (updateErr) {
+          console.error('[MUX Webhook] live_stream.active: DB update error:', updateErr);
+        } else {
+          console.log(`[MUX Webhook] live_stream.active: Session updated to LIVE for stream=${streamId}`);
+        }
+      }
+    }
+
+    // EVENT: video.live_stream.idle
+    // Fired when the broadcaster disconnects but within reconnect window.
+    if (eventType === 'video.live_stream.idle') {
+      const streamId = data.id as string;
+      console.log(`[MUX Webhook] live_stream.idle | stream=${streamId}`);
+
+      if (streamId) {
+        const { error: updateErr } = await supabase
+          .from('live_sessions')
+          .update({ status: 'idle', updated_at: now })
+          .eq('mux_live_stream_id', streamId)
+          .eq('status', 'live');
+
+        if (updateErr) {
+          console.error('[MUX Webhook] live_stream.idle: DB update error:', updateErr);
+        }
+      }
+    }
+
+    // EVENT: video.live_stream.disconnected
+    if (eventType === 'video.live_stream.disconnected') {
+      const streamId = data.id as string;
+      console.log(`[MUX Webhook] live_stream.disconnected | stream=${streamId}`);
+      if (streamId) {
+        await supabase
+          .from('live_sessions')
+          .update({ status: 'idle', updated_at: now })
+          .eq('mux_live_stream_id', streamId)
+          .eq('status', 'live');
+      }
+    }
+
+    // EVENT: video.live_stream.disabled
+    // Fired when the stream is permanently disabled.
+    if (eventType === 'video.live_stream.disabled') {
+      const streamId = data.id as string;
+      console.log(`[MUX Webhook] live_stream.disabled | stream=${streamId}`);
+
+      if (streamId) {
+        const { error: updateErr } = await supabase
+          .from('live_sessions')
+          .update({ status: 'ended', ended_at: now, chat_enabled: false, updated_at: now })
+          .eq('mux_live_stream_id', streamId)
+          .not('status', 'eq', 'ended');
+
+        if (updateErr) {
+          console.error('[MUX Webhook] live_stream.disabled: DB update error:', updateErr);
+        }
+      }
+    }
+
+    // =========================================================================
+    // ON-DEMAND VIDEO EVENTS
+    // =========================================================================
+
     // EVENT: video.upload.asset_created
-    // Fired when Mux creates an Asset from the Direct Upload.
-    // The upload_id links back to our mux_upload_id in Supabase.
-    // passthrough contains our video UUID.
-    // =========================================================================
     if (eventType === 'video.upload.asset_created') {
       const uploadId = data.id as string;
       const assetId = data.asset_id as string;
@@ -149,12 +223,7 @@ export async function POST(request: NextRequest) {
       console.log(`[MUX Webhook] upload.asset_created | upload=${uploadId} | asset=${assetId} | passthrough=${passthrough}`);
 
       if (assetId) {
-        const updatePayload = {
-          mux_asset_id: assetId,
-          mux_status: 'processing',
-          updated_at: now,
-        };
-
+        const updatePayload = { mux_asset_id: assetId, mux_status: 'processing', updated_at: now };
         let updated = false;
         if (passthrough) {
           const res = await updateVideo(supabase, { id: passthrough }, updatePayload, true);
@@ -166,10 +235,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // =========================================================================
     // EVENT: video.asset.created
-    // Fired when the asset object is initially created in 'preparing' state.
-    // =========================================================================
     if (eventType === 'video.asset.created') {
       const assetId = data.id as string;
       const passthrough = data.passthrough as string | undefined;
@@ -178,12 +244,7 @@ export async function POST(request: NextRequest) {
       console.log(`[MUX Webhook] asset.created | asset=${assetId} | passthrough=${passthrough} | upload=${uploadId}`);
 
       if (assetId) {
-        const updatePayload = {
-          mux_asset_id: assetId,
-          mux_status: 'processing',
-          updated_at: now,
-        };
-
+        const updatePayload = { mux_asset_id: assetId, mux_status: 'processing', updated_at: now };
         let updated = false;
         if (passthrough) {
           const res = await updateVideo(supabase, { id: passthrough }, updatePayload, true);
@@ -195,18 +256,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // =========================================================================
     // EVENT: video.asset.ready
-    // CRITICAL EVENT: Video is fully encoded and ready for playback!
-    // Saves public playback_id, duration, and sets status to 'ready'.
-    // =========================================================================
+    // CRITICAL: Video is fully encoded and ready for playback.
+    // Also handles live recording assets — passthrough may be a live_session UUID.
     if (eventType === 'video.asset.ready') {
       const assetId = data.id as string;
       const passthrough = data.passthrough as string | undefined;
       const uploadId = (data.upload_id as string) || undefined;
       const duration = typeof data.duration === 'number' ? data.duration : null;
 
-      // Extract public playback ID
       const playbackIds = data.playback_ids as Array<{ id: string; policy: string }> | undefined;
       const publicPlaybackId =
         playbackIds?.find((p) => p.policy === 'public')?.id ||
@@ -220,7 +278,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, error: 'Missing playback_id' }, { status: 200 });
       }
 
-      const updatePayload: Record<string, unknown> = {
+      const videoUpdatePayload: Record<string, unknown> = {
         mux_asset_id: assetId,
         mux_playback_id: publicPlaybackId,
         mux_duration: duration,
@@ -231,19 +289,33 @@ export async function POST(request: NextRequest) {
 
       let updateSuccess = false;
 
-      // 1. Try updating by passthrough (video UUID)
+      // Try updating regular on-demand video by passthrough (video UUID)
       if (passthrough) {
-        const res = await updateVideo(supabase, { id: passthrough }, updatePayload, false);
+        const res = await updateVideo(supabase, { id: passthrough }, videoUpdatePayload, false);
         if (res.error) {
           console.error('[MUX Webhook] asset.ready: DB error on passthrough lookup:', res.error);
-          return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
         }
         updateSuccess = res.updated;
+
+        // Also attempt to update live session recording (passthrough may be session ID)
+        const liveRecordingPayload = {
+          mux_recording_asset_id: assetId,
+          mux_recording_playback_id: publicPlaybackId,
+          recording_status: 'ready',
+          updated_at: now,
+        };
+        const { error: liveErr } = await supabase
+          .from('live_sessions')
+          .update(liveRecordingPayload)
+          .eq('id', passthrough);
+        if (!liveErr) {
+          console.log(`[MUX Webhook] asset.ready: Live recording updated for session=${passthrough}`);
+        }
       }
 
-      // 2. Fallback: try by mux_asset_id
+      // Fallback: by mux_asset_id
       if (!updateSuccess && assetId) {
-        const res = await updateVideo(supabase, { mux_asset_id: assetId }, updatePayload, false);
+        const res = await updateVideo(supabase, { mux_asset_id: assetId }, videoUpdatePayload, false);
         if (res.error) {
           console.error('[MUX Webhook] asset.ready: DB error on asset_id lookup:', res.error);
           return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
@@ -251,9 +323,9 @@ export async function POST(request: NextRequest) {
         updateSuccess = res.updated;
       }
 
-      // 3. Fallback: try by mux_upload_id
+      // Fallback: by mux_upload_id
       if (!updateSuccess && uploadId) {
-        const res = await updateVideo(supabase, { mux_upload_id: uploadId }, updatePayload, false);
+        const res = await updateVideo(supabase, { mux_upload_id: uploadId }, videoUpdatePayload, false);
         if (res.error) {
           console.error('[MUX Webhook] asset.ready: DB error on upload_id lookup:', res.error);
           return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
@@ -268,10 +340,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // =========================================================================
     // EVENT: video.asset.errored
-    // Video processing failed on Mux. Save error description and mark 'errored'.
-    // =========================================================================
     if (eventType === 'video.asset.errored') {
       const assetId = data.id as string;
       const passthrough = data.passthrough as string | undefined;
@@ -292,7 +361,14 @@ export async function POST(request: NextRequest) {
         updated_at: now,
       };
 
-      // Do NOT overwrite if video is already 'ready'
+      // Update live session recording status if this was a live recording
+      if (passthrough) {
+        await supabase
+          .from('live_sessions')
+          .update({ recording_status: 'errored', updated_at: now })
+          .eq('id', passthrough);
+      }
+
       if (passthrough) {
         await updateVideo(supabase, { id: passthrough }, updatePayload, true);
       } else if (assetId) {
@@ -302,10 +378,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // =========================================================================
     // EVENT: video.upload.errored / video.upload.cancelled
-    // Direct upload was aborted or failed before asset creation.
-    // =========================================================================
     if (eventType === 'video.upload.errored' || eventType === 'video.upload.cancelled') {
       const uploadId = data.id as string;
       const rawError = data.error as { type?: string; message?: string } | undefined;
@@ -318,11 +391,7 @@ export async function POST(request: NextRequest) {
 
       console.warn(`[MUX Webhook] ${eventType} | upload=${uploadId}: ${errorMsg}`);
 
-      const updatePayload = {
-        mux_status: 'errored',
-        mux_error_message: errorMsg,
-        updated_at: now,
-      };
+      const updatePayload = { mux_status: 'errored', mux_error_message: errorMsg, updated_at: now };
 
       if (passthrough) {
         await updateVideo(supabase, { id: passthrough }, updatePayload, true);
