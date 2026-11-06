@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 // Load environment
-const envPath = path.resolve('c:/Users/user/Documents/Edutech/edutech/.env');
+const envPath = fs.existsSync(path.resolve(__dirname, '../.env.local')) ? path.resolve(__dirname, '../.env.local') : path.resolve(__dirname, '../.env');
 const envContent = fs.readFileSync(envPath, 'utf8');
 const env = {};
 envContent.split(/\r?\n/).forEach((line) => {
@@ -292,7 +292,7 @@ async function runMonetizationTestSuite() {
 
   function validatePrices(isPaid, monthlyPaise, sixMonthPaise, yearlyPaise) {
     if (!isPaid) return { valid: true };
-    const minPaise = 1000; // ₹10
+    const minPaise = 100; // ₹1
     const maxPaise = 5000000; // ₹50,000
 
     if (
@@ -327,8 +327,12 @@ async function runMonetizationTestSuite() {
     'Standard channel pricing (₹299, ₹1,499, ₹2,499) passes validation'
   );
   assert(
-    validatePrices(true, 500, 149900, 249900).valid === false,
-    'Prices below minimum threshold (₹5 < ₹10) are rejected'
+    validatePrices(true, 50, 149900, 249900).valid === false,
+    'Prices below minimum threshold (₹0.50 < ₹1) are rejected'
+  );
+  assert(
+    validatePrices(true, 100, 149900, 249900).valid === true,
+    'Minimum price threshold (₹1 = 100 paise) is accepted'
   );
   assert(
     validatePrices(true, 6000000, 149900, 249900).valid === false,

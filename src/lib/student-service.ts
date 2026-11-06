@@ -506,54 +506,100 @@ export const StudentService = {
     };
   },
 
-  // 9. Check Subscription
+  // 9. Check Subscription (with strict 28-day expiration enforcement)
   async getSubscription(studentId: string, channelId: string): Promise<ChannelSubscription | null> {
+    const status = await this.getSubscriptionStatus(studentId, channelId);
+    if (status.hasActiveSubscription && status.subscription) {
+      return status.subscription;
+    }
+    return null;
+  },
+
+  // 9b. Detailed Subscription Status (Active vs Expired vs None, with Subject-Level Granularity)
+  async getSubscriptionStatus(studentId: string, channelId: string): Promise<{
+    hasActiveSubscription: boolean;
+    isExpired: boolean;
+    subscription: ChannelSubscription | null;
+    subscriptions: ChannelSubscription[];
+    activeSubjectNames: string[];
+    hasChannelWideSubscription: boolean;
+    expiresAt?: string;
+    startsAt?: string;
+    daysRemaining?: number;
+  }> {
     const { data, error } = await supabase
       .from('channel_subscriptions')
       .select('*')
       .eq('student_id', studentId)
       .eq('channel_id', channelId)
-      .eq('status', 'active')
-      .maybeSingle();
+      .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      return data as ChannelSubscription;
-    }
-    return null;
-  },
-
-  // 10. Subscribe to Package
-  async subscribeToPackage(params: {
-    studentId: string;
-    channelId: string;
-    packageType: SubscriptionPackageType;
-    classId?: string;
-    subjectName?: string;
-  }): Promise<ChannelSubscription> {
-    const { data, error } = await supabase
-      .from('channel_subscriptions')
-      .insert({
-        student_id: params.studentId,
-        channel_id: params.channelId,
-        package_type: params.packageType,
-        class_id: params.classId || null,
-        subject_name: params.subjectName || null,
-        status: 'active',
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error subscribing to package:', error);
-      throw error;
+    if (error || !data || data.length === 0) {
+      return {
+        hasActiveSubscription: false,
+        isExpired: false,
+        subscription: null,
+        subscriptions: [],
+        activeSubjectNames: [],
+        hasChannelWideSubscription: false,
+      };
     }
 
-    return data as ChannelSubscription;
-  },
+    const now = new Date();
+    const activeSubjectNames: string[] = [];
+    let hasChannelWideSubscription = false;
+    let mostRecentActiveSub: any = null;
+    let isAnyExpired = false;
 
-  // ==============================================================================
-  // PHASE 5.1: STUDENT PROGRESS TRACKING & TEACHER MESSAGES
-  // ==============================================================================
+    for (const sub of data) {
+      const isPastExpiry = Boolean(sub.expires_at && new Date(sub.expires_at) <= now);
+      if (isPastExpiry && sub.status === 'active') {
+        try {
+          await supabase
+            .from('channel_subscriptions')
+            .update({ status: 'expired', updated_at: now.toISOString() })
+            .eq('id', sub.id);
+        } catch {
+          // Ignored
+        }
+        sub.status = 'expired';
+        isAnyExpired = true;
+      }
+
+      if (sub.status === 'active' && !isPastExpiry) {
+        if (!mostRecentActiveSub) mostRecentActiveSub = sub;
+        if (sub.package_type === 'entire_channel' || !sub.subject_name) {
+          hasChannelWideSubscription = true;
+        } else if (sub.subject_name) {
+          activeSubjectNames.push(sub.subject_name);
+        }
+      }
+    }
+
+    const primarySub = mostRecentActiveSub || data[0];
+    const isExpired = !mostRecentActiveSub && isAnyExpired;
+    const hasActiveSubscription = hasChannelWideSubscription || activeSubjectNames.length > 0;
+
+    let daysRemaining = 0;
+    if (primarySub?.expires_at && hasActiveSubscription) {
+      daysRemaining = Math.max(
+        0,
+        Math.ceil((new Date(primarySub.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      );
+    }
+
+    return {
+      hasActiveSubscription,
+      isExpired,
+      subscription: primarySub as ChannelSubscription,
+      subscriptions: data as ChannelSubscription[],
+      activeSubjectNames,
+      hasChannelWideSubscription,
+      expiresAt: primarySub?.expires_at,
+      startsAt: primarySub?.starts_at || primarySub?.created_at,
+      daysRemaining,
+    };
+  },
 
   async getStudentProgress(studentId: string, channelId: string): Promise<{
     overall: { total: number; completed: number; percentage: number };

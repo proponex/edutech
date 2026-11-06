@@ -131,24 +131,24 @@ export function HelpMeFindMyTutor({
   const StepIcon = currentStep.icon;
 
   return (
-    <Card className="border border-neutral-200 dark:border-neutral-800 bg-gradient-to-b from-white to-neutral-50/50 dark:from-neutral-900 dark:to-neutral-950 shadow-md rounded-3xl overflow-hidden">
+    <Card className="border border-[#E9DDF8] bg-white shadow-xs rounded-3xl overflow-hidden">
       <CardContent className="p-6 sm:p-8 space-y-6">
         {/* Header with Title & Reset Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-200/80 dark:border-neutral-800/80">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E9DDF8]">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge variant="primary" className="text-xs uppercase tracking-wider font-bold">
+              <Badge className="text-xs uppercase tracking-wider font-bold bg-[#F3E8FF] text-[#9333EA] border-0">
                 Smart Tutor Match
               </Badge>
-              <span className="text-xs text-neutral-400">
+              <span className="text-xs text-[#68647D]">
                 Question {activeStep + 1} of {steps.length}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-neutral-950 dark:text-white font-display flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary-500" />
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#17133A] font-display flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#9333EA]" />
               Help Me Find My Tutor
             </h2>
-            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="text-xs sm:text-sm text-[#68647D]">
               Answer 6 quick preferences to find teacher channels tailored to your exact learning needs.
             </p>
           </div>
@@ -157,7 +157,7 @@ export function HelpMeFindMyTutor({
             variant="ghost"
             size="sm"
             onClick={handleReset}
-            className="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1.5 self-start sm:self-center"
+            className="text-xs text-[#68647D] hover:text-[#17133A] hover:bg-[#FAF9FF] rounded-xl flex items-center gap-1.5 self-start sm:self-center"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset All
@@ -174,13 +174,12 @@ export function HelpMeFindMyTutor({
                 key={st.id}
                 type="button"
                 onClick={() => setActiveStep(idx)}
-                className={`h-2 rounded-full transition-all cursor-pointer ${
-                  isCurrent
-                    ? 'bg-primary-500 ring-2 ring-primary-400/40'
+                className={`h-2 rounded-full transition-all cursor-pointer ${isCurrent
+                    ? 'bg-[#9333EA] ring-2 ring-[#9333EA]/20'
                     : isDone
-                    ? 'bg-primary-300 dark:bg-primary-800'
-                    : 'bg-neutral-200 dark:bg-neutral-800'
-                }`}
+                      ? 'bg-[#C084FC]'
+                      : 'bg-[#E9DDF8]'
+                  }`}
                 title={`Go to Question ${idx + 1}: ${st.title}`}
               />
             );
@@ -188,16 +187,16 @@ export function HelpMeFindMyTutor({
         </div>
 
         {/* Active Question Box */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-neutral-100/60 dark:bg-neutral-950/60 border border-neutral-200/80 dark:border-neutral-800/80 space-y-4">
+        <div className="p-5 sm:p-6 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-950/80 text-primary-700 dark:text-primary-300 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center shrink-0">
               <StepIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
+              <h3 className="text-base sm:text-lg font-bold text-[#17133A]">
                 {currentStep.title}
               </h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-[#68647D]">
                 {currentStep.subtitle}
               </p>
             </div>
@@ -218,14 +217,13 @@ export function HelpMeFindMyTutor({
                         setDailyStudyTime(time);
                         applyChanges({ dailyStudyTime: time });
                       }}
-                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-primary-500 text-neutral-950 border-primary-500 shadow-sm font-bold'
-                          : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400'
-                      }`}
+                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-between ${isSelected
+                          ? 'bg-[#9333EA] text-white border-[#9333EA] shadow-2xs font-bold'
+                          : 'bg-white text-[#68647D] border-[#E9DDF8] hover:border-[#9333EA]/40 hover:bg-white/80'
+                        }`}
                     >
                       <span>{time}</span>
-                      {isSelected && <Check className="w-4 h-4 text-neutral-950" />}
+                      {isSelected && <Check className="w-4 h-4 text-white" />}
                     </button>
                   );
                 })}
@@ -245,14 +243,13 @@ export function HelpMeFindMyTutor({
                         setPreferredLanguage(lang);
                         applyChanges({ preferredLanguage: lang });
                       }}
-                      className={`px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
-                        isSelected
-                          ? 'bg-primary-500 text-neutral-950 border-primary-500 shadow-sm font-bold'
-                          : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400'
-                      }`}
+                      className={`px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${isSelected
+                          ? 'bg-[#9333EA] text-white border-[#9333EA] shadow-2xs font-bold'
+                          : 'bg-white text-[#68647D] border-[#E9DDF8] hover:border-[#9333EA]/40 hover:bg-white/80'
+                        }`}
                     >
                       <span>{lang}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-neutral-950" />}
+                      {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                     </button>
                   );
                 })}
@@ -276,11 +273,10 @@ export function HelpMeFindMyTutor({
                           setClassId(cls.id);
                           applyChanges({ classId: cls.id });
                         }}
-                        className={`py-2 px-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-center truncate ${
-                          isSelected
-                            ? 'bg-primary-500 text-neutral-950 border-primary-500 shadow-sm font-extrabold'
-                            : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400'
-                        }`}
+                        className={`py-2 px-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer text-center truncate ${isSelected
+                            ? 'bg-[#9333EA] text-white border-[#9333EA] shadow-2xs font-extrabold'
+                            : 'bg-white text-[#68647D] border-[#E9DDF8] hover:border-[#9333EA]/40 hover:bg-white/80'
+                          }`}
                         title={cls.name}
                       >
                         {cls.name === 'Kindergarten' ? 'KG' : shortName}
@@ -303,11 +299,10 @@ export function HelpMeFindMyTutor({
                         setBoardId(b.id);
                         applyChanges({ boardId: b.id });
                       }}
-                      className={`p-3.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-between text-left ${
-                        isSelected
-                          ? 'bg-primary-500 text-neutral-950 border-primary-500 shadow-sm font-bold'
-                          : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400'
-                      }`}
+                      className={`p-3.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-between text-left ${isSelected
+                          ? 'bg-[#9333EA] text-white border-[#9333EA] shadow-2xs font-bold'
+                          : 'bg-white text-[#68647D] border-[#E9DDF8] hover:border-[#9333EA]/40 hover:bg-white/80'
+                        }`}
                     >
                       <div className="truncate">
                         <span className="block truncate">{b.name}</span>
@@ -315,7 +310,7 @@ export function HelpMeFindMyTutor({
                           <span className="text-[11px] opacity-75 font-mono">{b.code}</span>
                         )}
                       </div>
-                      {isSelected && <Check className="w-4 h-4 shrink-0 text-neutral-950 ml-2" />}
+                      {isSelected && <Check className="w-4 h-4 shrink-0 text-white ml-2" />}
                     </button>
                   );
                 })}
@@ -335,14 +330,13 @@ export function HelpMeFindMyTutor({
                         setLanguageWantedToLearn(lang);
                         applyChanges({ languageWantedToLearn: lang });
                       }}
-                      className={`px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
-                        isSelected
-                          ? 'bg-primary-500 text-neutral-950 border-primary-500 shadow-sm font-bold'
-                          : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400'
-                      }`}
+                      className={`px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${isSelected
+                          ? 'bg-[#9333EA] text-white border-[#9333EA] shadow-2xs font-bold'
+                          : 'bg-white text-[#68647D] border-[#E9DDF8] hover:border-[#9333EA]/40 hover:bg-white/80'
+                        }`}
                     >
                       <span>{lang}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-neutral-950" />}
+                      {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                     </button>
                   );
                 })}
@@ -351,31 +345,30 @@ export function HelpMeFindMyTutor({
           </div>
 
           {/* Wizard Navigation: Back & Next */}
-          <div className="flex items-center justify-between pt-3 border-t border-neutral-200/60 dark:border-neutral-800/60">
+          <div className="flex items-center justify-between pt-3 border-t border-[#E9DDF8]">
             <Button
               type="button"
               variant="outline"
               size="sm"
               disabled={activeStep === 0}
               onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
-              className="text-xs flex items-center gap-1"
+              className="text-xs flex items-center gap-1 border-[#E9DDF8] text-[#17133A] hover:bg-white rounded-xl"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               Previous
             </Button>
 
-            <span className="text-xs text-neutral-400 hidden sm:inline">
-              Selected: <strong className="text-neutral-900 dark:text-white">{allClasses.find((c) => c.id === classId)?.name || 'Class'}</strong> •{' '}
-              <strong className="text-neutral-900 dark:text-white">{preferredLanguage}</strong>
+            <span className="text-xs text-[#68647D] hidden sm:inline">
+              Selected: <strong className="text-[#17133A]">{allClasses.find((c) => c.id === classId)?.name || 'Class'}</strong> •{' '}
+              <strong className="text-[#17133A]">{preferredLanguage}</strong>
             </span>
 
             {activeStep < steps.length - 1 ? (
               <Button
                 type="button"
-                variant="primary"
                 size="sm"
                 onClick={() => setActiveStep((prev) => Math.min(steps.length - 1, prev + 1))}
-                className="text-xs flex items-center gap-1 font-bold"
+                className="text-xs flex items-center gap-1 font-bold bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl shadow-xs"
               >
                 Next Step
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -383,13 +376,12 @@ export function HelpMeFindMyTutor({
             ) : (
               <Button
                 type="button"
-                variant="primary"
                 size="sm"
                 onClick={() => {
                   const target = document.getElementById('results-section');
                   if (target) target.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="text-xs flex items-center gap-1 font-bold shadow-md shadow-primary-500/20"
+                className="text-xs flex items-center gap-1 font-bold bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl shadow-xs"
               >
                 <Check className="w-3.5 h-3.5" />
                 View Matched Tutors

@@ -1,3 +1,4 @@
+import { calculatePricingFromTeacherBase, decomposeStudentPayment } from './pricing-calculator';
 import { createClient } from '@supabase/supabase-js';
 import {
   MonetizationScope,
@@ -18,23 +19,30 @@ function getAdminClient() {
   });
 }
 
-// Configurable pricing bounds in paise (₹10 to ₹50,000)
-export const MIN_PRICE_PAISE = 1000;    // ₹10.00
+// Configurable pricing bounds in paise (₹1 to ₹50,000)
+export const MIN_PRICE_PAISE = 100;    // ₹1.00
 export const MAX_PRICE_PAISE = 5000000; // ₹50,000.00
+
+// Exact 28-day duration constant for channel subscriptions
+export const CHANNEL_SUBSCRIPTION_DAYS = 28;
+export const DURATION_28_DAYS_MS = 28 * 24 * 60 * 60 * 1000;
 
 // Standard baseline pricing fallbacks in paise (if teacher has not set custom rates)
 export const DEFAULT_PRICING: Record<MonetizationScope, Record<SubscriptionDuration, number>> = {
   channel: {
+    '28_days': 49900,   // ₹499
     '1_month': 49900,   // ₹499
     '6_months': 249900, // ₹2,499
     '12_months': 399900 // ₹3,999
   },
   subject: {
+    '28_days': 29900,   // ₹299
     '1_month': 29900,   // ₹299
     '6_months': 149900, // ₹1,499
     '12_months': 249900 // ₹2,499
   },
   chapter: {
+    '28_days': 14900,   // ₹149
     '1_month': 14900,   // ₹149
     '6_months': 69900,  // ₹699
     '12_months': 119900 // ₹1,199
@@ -47,6 +55,9 @@ export const DEFAULT_PRICING: Record<MonetizationScope, Record<SubscriptionDurat
  * month-end clamping (e.g. Jan 31 + 1 month => Feb 28 or 29), and timezone consistency.
  */
 export function calculateCalendarExpiry(baseDate: Date, duration: SubscriptionDuration): Date {
+  if (duration === '28_days') {
+    return new Date(baseDate.getTime() + DURATION_28_DAYS_MS);
+  }
   const result = new Date(baseDate.getTime());
   const initialDay = result.getDate();
   let monthsToAdd = 1;
@@ -822,7 +833,13 @@ export const MonetizationService = {
       startsAt = new Date(existing.starts_at);
     }
 
-    const newExpiresAt = calculateCalendarExpiry(baseExpiryDate, params.duration);
+    const is28DayChannel =
+      params.duration === '28_days' ||
+      (params.scope === 'channel' && (params.duration === '1_month' || !params.duration));
+
+    const newExpiresAt = is28DayChannel
+      ? new Date(baseExpiryDate.getTime() + DURATION_28_DAYS_MS)
+      : calculateCalendarExpiry(baseExpiryDate, params.duration);
 
     let savedEntitlement: any;
 
@@ -881,10 +898,17 @@ export const MonetizationService = {
 
       const { data: existingSub } = await supabase
         .from('channel_subscriptions')
-        .select('id, expires_at')
+        .select('*')
         .eq('student_id', params.studentId)
         .eq('channel_id', params.channelId)
         .maybeSingle();
+
+      const subStartsAt =
+        existingSub && existingSub.status === 'active' && existingSub.expires_at && new Date(existingSub.expires_at) > now
+          ? (existingSub.starts_at ? new Date(existingSub.starts_at) : startsAt)
+          : startsAt;
+
+      const effectiveDuration = is28DayChannel ? '28_days' : params.duration;
 
       if (existingSub) {
         await supabase
@@ -893,10 +917,12 @@ export const MonetizationService = {
             status: 'active',
             package_type: packageType,
             subject_name: params.subjectName || null,
+            starts_at: subStartsAt.toISOString(),
             expires_at: newExpiresAt.toISOString(),
-            duration: params.duration,
+            duration: effectiveDuration,
             unit_id: params.unitId || null,
-            order_id: params.orderId || null,
+            order_id: params.orderId || existingSub.order_id,
+            payment_id: params.transactionId || existingSub.payment_id,
             updated_at: new Date().toISOString(),
           })
           .eq('id', existingSub.id);
@@ -907,11 +933,33 @@ export const MonetizationService = {
           package_type: packageType,
           subject_name: params.subjectName || null,
           status: 'active',
+          starts_at: subStartsAt.toISOString(),
           expires_at: newExpiresAt.toISOString(),
-          duration: params.duration,
+          duration: effectiveDuration,
           unit_id: params.unitId || null,
           order_id: params.orderId || null,
+          payment_id: params.transactionId || null,
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
         });
+      }
+
+      // Record in payments table if migrated
+      if (params.transactionId || params.orderId) {
+        try {
+          await supabase.from('payments').insert({
+            student_id: params.studentId,
+            channel_id: params.channelId,
+            razorpay_order_id: params.orderId || 'manual_order',
+            razorpay_payment_id: params.transactionId || null,
+            amount: 0,
+            currency: 'INR',
+            status: 'captured',
+            created_at: now.toISOString(),
+          });
+        } catch {
+          // payments table optional if not yet migrated
+        }
       }
     } catch (e: any) {
       console.warn('[MonetizationService] channel_subscriptions sync notice:', e.message);

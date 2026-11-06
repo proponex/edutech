@@ -411,7 +411,7 @@ export function TeacherPricingManager({
                         </span>
                         <Input
                           type="number"
-                          min="10"
+                          min="1"
                           max="50000"
                           step="1"
                           required
@@ -452,7 +452,7 @@ export function TeacherPricingManager({
                         </span>
                         <Input
                           type="number"
-                          min="10"
+                          min="1"
                           max="50000"
                           step="1"
                           required
@@ -493,7 +493,7 @@ export function TeacherPricingManager({
                         </span>
                         <Input
                           type="number"
-                          min="10"
+                          min="1"
                           max="50000"
                           step="1"
                           required
@@ -841,7 +841,7 @@ export function TeacherPricingManager({
                       </span>
                       <Input
                         type="number"
-                        min="10"
+                        min="1"
                         max="50000"
                         step="1"
                         required
@@ -881,7 +881,7 @@ export function TeacherPricingManager({
                       </span>
                       <Input
                         type="number"
-                        min="10"
+                        min="1"
                         max="50000"
                         step="1"
                         required
@@ -921,7 +921,7 @@ export function TeacherPricingManager({
                       </span>
                       <Input
                         type="number"
-                        min="10"
+                        min="1"
                         max="50000"
                         step="1"
                         required

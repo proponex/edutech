@@ -146,16 +146,15 @@ export function StudentParentLinkingSection({
       {/* FEEDBACK BANNER */}
       {message && (
         <div
-          className={`p-3.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in duration-200 ${
-            message.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800'
-              : 'bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200 border border-red-300 dark:border-red-800'
-          }`}
+          className={`p-3.5 rounded-2xl text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in duration-200 ${message.type === 'success'
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
+              : 'bg-red-50 text-red-900 border border-red-300'
+            }`}
         >
           {message.type === 'success' ? (
-            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
           )}
           <span className="font-semibold">{message.text}</span>
         </div>
@@ -167,53 +166,53 @@ export function StudentParentLinkingSection({
         {/* LEFT CORNER: STUDENT ID (READ-ONLY, CANNOT BE CHANGED) */}
         {/* ======================================================================= */}
         <div className="lg:col-span-5 flex flex-col">
-          <Card className="h-full border border-primary-200/80 dark:border-primary-900/60 bg-gradient-to-br from-primary-50/70 via-white to-amber-50/30 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden">
+          <Card className="h-full border border-[#E9DDF8] bg-white rounded-3xl shadow-xs hover:shadow-sm transition-shadow flex flex-col justify-between overflow-hidden">
             <CardContent className="p-5 sm:p-6 flex flex-col justify-between h-full space-y-4">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-xl bg-primary-500 text-neutral-950 flex items-center justify-center shrink-0 shadow-xs font-bold">
+                    <div className="w-9 h-9 rounded-xl bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center shrink-0 shadow-2xs font-bold">
                       <IdCard className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-primary-900 dark:text-primary-300 block">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#17133A] block">
                         Student ID
                       </span>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      <span className="text-[11px] text-[#68647D]">
                         Official Student Identifier
                       </span>
                     </div>
                   </div>
                   <Badge
                     variant="outline"
-                    className="text-[10px] bg-white/90 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold border-neutral-300 dark:border-neutral-700"
+                    className="text-[10px] bg-white text-[#68647D] font-bold border-[#E9DDF8]"
                   >
                     Cannot be changed
                   </Badge>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-white dark:bg-neutral-950/80 border border-primary-200/70 dark:border-primary-900/70 flex items-center justify-between gap-3 shadow-inner">
+                <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] flex items-center justify-between gap-3 shadow-inner">
                   <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#68647D]/60 block mb-0.5">
                       Permanent Unique ID
                     </span>
                     <span
                       id="student-dashboard-id-display"
-                      className="text-xl sm:text-2xl font-extrabold tracking-tight text-neutral-950 dark:text-white font-mono truncate block select-all"
+                      className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#17133A] font-mono truncate block select-all"
                     >
                       {loading && !studentId ? (
-                        <span className="inline-block w-40 h-7 bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-md" />
+                        <span className="inline-block w-40 h-7 bg-[#E9DDF8] animate-pulse rounded-md" />
                       ) : (
                         studentId || 'Generating...'
                       )}
                     </span>
                   </div>
                   <Button
-                    variant={copied ? 'success' : 'primary'}
                     size="sm"
                     onClick={handleCopyId}
                     disabled={!studentId || loading}
-                    className="font-bold shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs shadow-xs cursor-pointer"
+                    className={`font-bold shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs shadow-xs cursor-pointer ${copied ? 'bg-emerald-600 text-white' : 'bg-[#9333EA] hover:bg-[#7E22CE] text-white'
+                      }`}
                     id="copy-student-id-button"
                     title="Copy Student ID"
                   >
@@ -232,8 +231,8 @@ export function StudentParentLinkingSection({
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+              <div className="pt-2 border-t border-[#E9DDF8]">
+                <p className="text-xs text-[#68647D] leading-relaxed">
                   Share this permanent ID with your parents so they can request connection to follow your syllabus progress.
                 </p>
               </div>
@@ -245,66 +244,66 @@ export function StudentParentLinkingSection({
         {/* RIGHT SIDE: PARENT REQUESTS (ACCEPT/REJECT INLINE, NO SEPARATE PAGE) */}
         {/* ======================================================================= */}
         <div className="lg:col-span-7 flex flex-col">
-          <Card className="h-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden">
+          <Card className="h-full border border-[#E9DDF8] bg-white rounded-3xl shadow-xs hover:shadow-sm transition-shadow flex flex-col justify-between overflow-hidden">
             <CardContent className="p-5 sm:p-6 flex flex-col justify-between h-full space-y-4">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-950/70 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 flex items-center justify-center shrink-0 font-bold">
+                    <div className="w-9 h-9 rounded-xl bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center shrink-0 font-bold">
                       <Users className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-extrabold text-neutral-950 dark:text-white font-display">
+                      <h3 className="text-sm font-extrabold text-[#17133A] font-display">
                         Parent Requests
                       </h3>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      <span className="text-[11px] text-[#68647D]">
                         Approve or decline connection requests
                       </span>
                     </div>
                   </div>
 
                   {pendingRequests.length > 0 ? (
-                    <Badge variant="primary" className="text-xs font-bold animate-pulse">
+                    <Badge className="text-xs font-bold animate-pulse bg-[#F3E8FF] text-[#9333EA] border-0">
                       {pendingRequests.length} Pending
                     </Badge>
                   ) : linkedParents.length > 0 ? (
-                    <Badge variant="success" className="text-[11px] font-semibold">
+                    <Badge className="text-[11px] font-semibold bg-emerald-100 text-emerald-800 border-0">
                       {linkedParents.length} Connected
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] text-neutral-500">
+                    <Badge variant="outline" className="text-[10px] text-[#68647D] border-[#E9DDF8]">
                       0 Pending
                     </Badge>
                   )}
                 </div>
 
                 {loading ? (
-                  <div className="h-28 bg-neutral-100 dark:bg-neutral-800/60 rounded-2xl animate-pulse" />
+                  <div className="h-28 bg-[#FAF9FF] rounded-2xl animate-pulse" />
                 ) : pendingRequests.length > 0 ? (
                   <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
                     {pendingRequests.map((req) => (
                       <div
                         key={req.id}
-                        className="p-3.5 rounded-2xl border border-primary-200/80 dark:border-primary-900/60 bg-primary-50/30 dark:bg-primary-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                        className="p-3.5 rounded-2xl border border-[#E9DDF8] bg-[#FAF9FF] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-primary-500 text-neutral-950 font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                          <div className="w-9 h-9 rounded-xl bg-[#9333EA] text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                             {req.parent?.name?.charAt(0).toUpperCase() || 'P'}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-sm text-neutral-900 dark:text-white truncate">
+                              <span className="font-bold text-sm text-[#17133A] truncate">
                                 {req.parent?.name || 'Parent'}
                               </span>
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300">
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white border border-[#E9DDF8] text-[#68647D]">
                                 {req.relationship_type || 'Guardian'}
                               </span>
-                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                              <span className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 Awaiting approval
                               </span>
                             </div>
-                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                            <p className="text-[11px] text-[#68647D] truncate mt-0.5">
                               {req.parent?.email ? `${req.parent.email} • ` : ''}
                               Requested{' '}
                               {new Date(req.created_at).toLocaleDateString(undefined, {
@@ -322,18 +321,17 @@ export function StudentParentLinkingSection({
                             size="sm"
                             onClick={() => handleRespond(req.id, 'reject')}
                             disabled={actionInProgress === req.id}
-                            className="text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border-red-200 dark:border-red-900/50 rounded-xl px-2.5 py-1.5 cursor-pointer"
+                            className="text-xs font-semibold text-red-600 hover:bg-red-50 border-red-200 rounded-xl px-2.5 py-1.5 cursor-pointer"
                             title="Reject connection request"
                           >
                             <XCircle className="w-3.5 h-3.5 mr-1" />
                             Reject
                           </Button>
                           <Button
-                            variant="success"
                             size="sm"
                             onClick={() => handleRespond(req.id, 'accept')}
                             disabled={actionInProgress === req.id}
-                            className="text-xs font-bold rounded-xl px-3 py-1.5 cursor-pointer shadow-xs"
+                            className="text-xs font-bold rounded-xl px-3 py-1.5 cursor-pointer shadow-xs bg-[#9333EA] hover:bg-[#7E22CE] text-white"
                             title="Accept connection"
                           >
                             <CheckCircle className="w-3.5 h-3.5 mr-1" />
@@ -345,35 +343,35 @@ export function StudentParentLinkingSection({
                   </div>
                 ) : linkedParents.length > 0 ? (
                   <div className="space-y-2">
-                    <div className="p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/40 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
                           {linkedParents[0].name?.charAt(0).toUpperCase() || 'P'}
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-neutral-900 dark:text-white block">
+                          <span className="text-xs font-bold text-[#17133A] block">
                             Linked: {linkedParents[0].name}
                           </span>
-                          <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                          <span className="text-[11px] text-[#68647D]">
                             {linkedParents[0].relationship_type || 'Guardian'} • Active access to curriculum analytics
                           </span>
                         </div>
                       </div>
-                      <Badge variant="success" className="text-[10px]">
+                      <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-0">
                         Active
                       </Badge>
                     </div>
                     {linkedParents.length > 1 && (
-                      <p className="text-[11px] text-neutral-400 pl-1">
+                      <p className="text-[11px] text-[#68647D] pl-1">
                         +{linkedParents.length - 1} more linked guardian(s)
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="p-4 rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 flex items-center gap-3">
-                    <ShieldCheck className="w-6 h-6 text-neutral-400 shrink-0" />
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                      <span className="font-semibold text-neutral-700 dark:text-neutral-300 block">
+                  <div className="p-4 rounded-2xl border border-dashed border-[#E9DDF8] bg-[#FAF9FF]/50 flex items-center gap-3">
+                    <ShieldCheck className="w-6 h-6 text-[#68647D]/50 shrink-0" />
+                    <div className="text-xs text-[#68647D]">
+                      <span className="font-semibold text-[#17133A] block">
                         No pending parent connection requests
                       </span>
                       When your parent enters your Student ID in their dashboard, their connection request will appear here for your immediate approval.
@@ -382,9 +380,9 @@ export function StudentParentLinkingSection({
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-neutral-400 pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
+              <div className="flex items-center justify-between text-[11px] text-[#68647D] pt-2 border-t border-[#E9DDF8]">
                 <span>Student approval required before parents can view analytics</span>
-                <span className="font-semibold text-primary-600 dark:text-primary-400">Secure Parent Linking</span>
+                <span className="font-semibold text-[#9333EA]">Secure Parent Linking</span>
               </div>
             </CardContent>
           </Card>

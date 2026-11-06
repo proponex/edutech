@@ -11,6 +11,7 @@ import {
   SubscriptionDuration,
 } from '@/types';
 import { MonetizationService, calculateCommission } from './monetization-service';
+import { decomposeStudentPayment } from './pricing-calculator';
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -344,6 +345,9 @@ export const PaymentService = {
     success: boolean;
     message: string;
     orderId: string;
+    expiresAt?: string;
+    startsAt?: string;
+    durationDays?: number;
   }> {
     const supabase = getAdminClient();
 
@@ -437,12 +441,14 @@ export const PaymentService = {
       })
       .eq('id', order.id);
 
-    // 8. Grant Entitlement using MonetizationService with calendar-based duration
+    // 8. Grant Entitlement using MonetizationService with 28-day channel subscription duration
+    let grantedEntitlement: any = null;
     if (order.item_type === 'course' || order.metadata?.scope) {
       const scope: MonetizationScope = order.metadata?.scope || 'channel';
-      const duration: SubscriptionDuration = order.metadata?.duration || '1_month';
+      const duration: SubscriptionDuration =
+        scope === 'channel' ? '28_days' : (order.metadata?.duration || '28_days');
 
-      await MonetizationService.grantEntitlement({
+      grantedEntitlement = await MonetizationService.grantEntitlement({
         studentId: order.student_id,
         channelId: order.item_id,
         scope,
@@ -452,6 +458,23 @@ export const PaymentService = {
         orderId: order.id,
         transactionId: trans?.id,
       });
+    }
+
+    // 8b. Record in payments table (Section 7 schema)
+    try {
+      await supabase.from('payments').insert({
+        id: trans?.id,
+        student_id: params.studentId,
+        channel_id: order.item_id,
+        razorpay_order_id: params.razorpay_order_id,
+        razorpay_payment_id: params.razorpay_payment_id,
+        amount: Number(order.amount_paise),
+        currency: order.currency || 'INR',
+        status: 'captured',
+        created_at: new Date().toISOString(),
+      });
+    } catch (payErr: any) {
+      console.warn('[PaymentService] payments table insertion notice:', payErr.message);
     }
 
     // 9. Allocate Teacher Earnings (80% educator, 20% platform commission)
@@ -467,8 +490,11 @@ export const PaymentService = {
 
     return {
       success: true,
-      message: 'Payment verified successfully. Learning content unlocked!',
+      message: 'Payment verified successfully. 28-day channel subscription unlocked!',
       orderId: order.id,
+      expiresAt: grantedEntitlement?.expires_at,
+      startsAt: grantedEntitlement?.starts_at,
+      durationDays: 28,
     };
   },
 
@@ -600,6 +626,23 @@ export const PaymentService = {
             });
           }
 
+          // Record in payments table
+          try {
+            await supabase.from('payments').insert({
+              id: transId,
+              student_id: order.student_id,
+              channel_id: order.item_id,
+              razorpay_order_id: razorpayOrderId,
+              razorpay_payment_id: razorpayPaymentId,
+              amount: amountPaise,
+              currency: payment.currency || 'INR',
+              status: 'captured',
+              created_at: new Date().toISOString(),
+            });
+          } catch {
+            // Optional
+          }
+
           // Allocate teacher earnings
           const teacherId = order.metadata?.teacher_id;
           if (teacherId && transId) {
@@ -704,28 +747,44 @@ export const PaymentService = {
     subjectName?: string | null;
   }): Promise<void> {
     const supabase = getAdminClient();
+    const DURATION_28_DAYS_MS = 28 * 24 * 60 * 60 * 1000;
+    const now = new Date();
 
-    // Check if subscription row already exists
-    const { data: existing } = await supabase
+    // Check if subscription row already exists for this specific scope/subject
+    let query = supabase
       .from('channel_subscriptions')
-      .select('id, status')
+      .select('id, status, expires_at')
       .eq('student_id', params.studentId)
-      .eq('channel_id', params.channelId)
-      .maybeSingle();
+      .eq('channel_id', params.channelId);
+
+    if (params.subjectName) {
+      query = query.eq('subject_name', params.subjectName);
+    } else {
+      query = query.is('subject_name', null);
+    }
+
+    const { data: existing } = await query.maybeSingle();
+
+    // 28-day cycle calculation
+    let newExpiry = new Date(now.getTime() + DURATION_28_DAYS_MS);
+    if (existing?.status === 'active' && existing.expires_at && new Date(existing.expires_at) > now) {
+      // Active renewal extends by 28 days from existing expiry
+      newExpiry = new Date(new Date(existing.expires_at).getTime() + DURATION_28_DAYS_MS);
+    }
 
     if (existing) {
-      if (existing.status !== 'active') {
-        await supabase
-          .from('channel_subscriptions')
-          .update({
-            status: 'active',
-            package_type: params.packageType,
-            class_id: params.classId || null,
-            subject_name: params.subjectName || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing.id);
-      }
+      await supabase
+        .from('channel_subscriptions')
+        .update({
+          status: 'active',
+          package_type: params.packageType,
+          class_id: params.classId || null,
+          subject_name: params.subjectName || null,
+          expires_at: newExpiry.toISOString(),
+          duration: '1_month',
+          updated_at: now.toISOString(),
+        })
+        .eq('id', existing.id);
     } else {
       await supabase.from('channel_subscriptions').insert({
         student_id: params.studentId,
@@ -734,14 +793,15 @@ export const PaymentService = {
         class_id: params.classId || null,
         subject_name: params.subjectName || null,
         status: 'active',
+        starts_at: now.toISOString(),
+        expires_at: newExpiry.toISOString(),
+        duration: '1_month',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
       });
     }
   },
 
-  /**
-   * Helper: Allocate teacher earnings based on platform commission rate.
-   * Default: 20% platform commission, 80% educator earnings.
-   */
   async allocateTeacherEarnings(params: {
     teacherId: string;
     orderId: string;
@@ -752,9 +812,11 @@ export const PaymentService = {
     const supabase = getAdminClient();
 
     const rate = params.commissionRatePercent ?? 20.0; // 20% platform fee
-    const comm = calculateCommission(params.grossAmountPaise, rate);
-    const platformCommissionPaise = comm.platformCommissionPaise;
-    const teacherSharePaise = comm.teacherSharePaise;
+    // Section 10: Platform fee = 20% of payment amount, Teacher earnings = 80% of payment amount
+    // Rule: Student Payment = Teacher Base + 20% Platform Fee
+    // Teacher Earnings = Student Payment / 1.20
+    // Platform Fee = Student Payment - Teacher Earnings
+    const { teacherSharePaise, platformCommissionPaise } = decomposeStudentPayment(params.grossAmountPaise);
 
     try {
       // Idempotency: verify not already allocated

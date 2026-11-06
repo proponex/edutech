@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { PrepnxFooter } from '@/components/student/PrepnxFooter';
 import { HeroCarousel } from '@/components/home/hero-carousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,13 @@ import {
   IdCard,
   Copy,
   Check,
+  Lock,
+  Unlock,
+  PieChart,
+  Activity,
+  ChevronRight,
 } from 'lucide-react';
+import { ChannelDetailsOverlay } from '@/components/student/ChannelDetailsOverlay';
 import {
   Profile,
   StudentAcademicProfile,
@@ -58,6 +65,7 @@ import { StudentTestimonialsSection } from '@/components/student/student-testimo
 import { AboutEdutechSection } from '@/components/student/about-edutech-section';
 import { StudentParentLinkingSection } from '@/components/student/student-parent-linking-section';
 import { StudentLiveSection } from '@/components/student/StudentLiveSection';
+import { PrepnxStudentHome } from '@/components/student/PrepnxStudentHome';
 
 function StudentDashboardContent() {
   const router = useRouter();
@@ -99,6 +107,14 @@ function StudentDashboardContent() {
   // Search Tutor Specific State
   const [searchTutorQuery, setSearchTutorQuery] = useState<string>('');
   const [showSearchFilter, setShowSearchFilter] = useState<boolean>(true);
+  const [channelFilterMode, setChannelFilterMode] = useState<'all' | 'enrolled'>('all');
+
+  // Handle redirect if user navigates to /student?tab=subscription
+  useEffect(() => {
+    if (currentTab === 'subscription') {
+      router.replace('/student/payments');
+    }
+  }, [currentTab, router]);
 
   // Channel Results
   const [channels, setChannels] = useState<ChannelItem[]>([]);
@@ -310,6 +326,39 @@ function StudentDashboardContent() {
     );
   };
 
+  // Overlay State for Channel Analytics
+  const [selectedOverlayChannel, setSelectedOverlayChannel] = useState<{
+    channel: ChannelItem | null;
+    teacher: Profile | null;
+    subscription: ChannelSubscription | null;
+    progress: { total: number; completed: number; percentage: number };
+  } | null>(null);
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+
+  const openChannelDetails = (
+    channel: ChannelItem,
+    teacher?: Profile | null,
+    subscription?: ChannelSubscription | null,
+    progress?: { total: number; completed: number; percentage: number }
+  ) => {
+    setSelectedOverlayChannel({
+      channel,
+      teacher: teacher || null,
+      subscription: subscription || null,
+      progress: progress || { total: 0, completed: 0, percentage: 0 },
+    });
+    setIsOverlayOpen(true);
+  };
+
+  // Sync classId from URL searchParams
+  useEffect(() => {
+    const classIdFromUrl = searchParams.get('classId');
+    if (classIdFromUrl && classIdFromUrl !== selectedClassId) {
+      setSelectedClassId(classIdFromUrl);
+      loadChannels(classIdFromUrl, filterBoardId, filterSubject, filterLanguage);
+    }
+  }, [searchParams, selectedClassId, filterBoardId, filterSubject, filterLanguage, loadChannels]);
+
   // Logout handler
   const handleLogout = async () => {
     try {
@@ -454,15 +503,15 @@ function StudentDashboardContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
+      <div className="min-h-screen flex flex-col bg-[#FAFAFD] text-navy-900">
         <Header />
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse space-y-6">
-            <div className="h-10 w-64 bg-neutral-200 dark:bg-neutral-800 rounded-xl" />
-            <div className="h-14 w-full bg-neutral-200 dark:bg-neutral-800 rounded-2xl" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-4">
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className="h-64 bg-neutral-200 dark:bg-neutral-800 rounded-2xl" />
+            <div className="h-10 w-64 bg-lavender-100 rounded-xl" />
+            <div className="h-64 w-full bg-lavender-100 rounded-3xl" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 pt-4">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="h-44 bg-lavender-100 rounded-2xl" />
               ))}
             </div>
           </div>
@@ -472,84 +521,19 @@ function StudentDashboardContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors">
+    <div className="prepnx-student-theme min-h-screen flex flex-col bg-[#FAF9FF] text-[#17133A] transition-colors">
       <Header />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
-        {/* TOP GREETING BAR WITH AVATAR & LOGOUT */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-neutral-200/80 dark:border-neutral-800/80">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <Badge variant="primary" className="text-xs font-semibold uppercase tracking-wider">
-                Student Portal
-              </Badge>
-              {isSubscribed ? (
-                <Badge variant="success" className="text-xs font-semibold">
-                  Enrolled Learner
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                  Exploring Tutors
-                </Badge>
-              )}
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white font-display">
-              Welcome back{profile?.name ? `, ${profile.name}` : ''}!
-            </h1>
-            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-              {currentTab === 'home' && (isSubscribed ? 'Continue your daily curriculum lessons and track subject progress.' : 'Find certified tuition teachers across CBSE, ICSE & State Boards.')}
-              {currentTab === 'search' && 'Search teacher channels by name or refine with the 6-point tutor finder filter.'}
-              {currentTab === 'channels' && 'Your active enrolled channels and classroom lessons.'}
-              {currentTab === 'analysis' && (isSubscribed ? 'Detailed learning performance and concept mastery reports.' : 'Start learning to unlock real-time academic analysis.')}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => setIsProfileOpen(true)}
-              className="flex items-center gap-3 p-1.5 pr-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-primary-400 dark:hover:border-primary-600 shadow-sm transition-all text-left cursor-pointer group"
-              title="Click to view and edit student profile"
-              aria-label="Student Profile"
-            >
-              <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-primary-100 dark:bg-primary-950/70 border border-primary-300 dark:border-primary-800 flex items-center justify-center shrink-0">
-                {profile?.photo_url ? (
-                  <Image
-                    src={profile.photo_url}
-                    alt={profile.name || 'Student'}
-                    width={40}
-                    height={40}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <User className="w-5 h-5 text-primary-700 dark:text-primary-300" />
-                )}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                  {profile?.name || 'Student Profile'}
-                </span>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  Account &amp; Preferences
-                </span>
-              </div>
-            </button>
-
-            <Button
-              variant="outline"
-              size="md"
-              onClick={handleLogout}
-              className="flex items-center gap-2 rounded-2xl border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50/50 dark:hover:bg-red-950/30 px-4 py-2.5 text-sm font-semibold transition-all shadow-sm cursor-pointer"
-              title="Log out of student account"
-              aria-label="Log out"
-            >
-              <LogOut className="w-4 h-4 text-neutral-500 hover:text-red-600 dark:hover:text-red-400" />
-              <span>Logout</span>
-            </Button>
-          </div>
-        </div>
-
+      {currentTab === 'home' ? (
+        <PrepnxStudentHome
+          profile={profile}
+          studentId={studentId}
+          allClasses={allClasses}
+          onOpenProfile={() => setIsProfileOpen(true)}
+          onLogout={handleLogout}
+        />
+      ) : (
+        <main className="flex-1 w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-8 space-y-10 font-sans">
         {/* ======================================================================= */}
         {/* VIEW: TAB === 'PARENT-REQUESTS' OR TAB === 'STUDENT-ID' (FALLBACK) */}
         {/* ======================================================================= */}
@@ -563,262 +547,39 @@ function StudentDashboardContent() {
         )}
 
         {/* ======================================================================= */}
-        {/* VIEW A: TAB === 'HOME' */}
-        {/* ======================================================================= */}
-        {currentTab === 'home' && (
-          <div className="space-y-10">
-            {/* 1. TOP SECTION: Student ID (Left Corner) & Parent Requests (Right Side) */}
-            <StudentParentLinkingSection
-              initialStudentId={studentId}
-              onStudentIdLoaded={(id) => setStudentId(id)}
-            />
-
-            {/* 2. BELOW TOP SECTION: Content He Last Watched / Recent Learning */}
-            {recentLearning && (
-              <RecentLearningSection learning={recentLearning} />
-            )}
-
-            {!isSubscribed ? (
-              /* PRE-SUBSCRIPTION FLOW */
-              <>
-                {/* Sliding Banners */}
-                <div className="rounded-3xl overflow-hidden shadow-sm border border-neutral-200/80 dark:border-neutral-800/80">
-                  <HeroCarousel />
-                </div>
-
-                {/* 1. Help Me Find My Tutor (6 Questions) */}
-                <HelpMeFindMyTutor
-                  allClasses={allClasses}
-                  allBoards={allBoards}
-                  currentFilters={{
-                    classId: selectedClassId,
-                    boardId: filterBoardId,
-                    preferredLanguage: filterLanguage,
-                  }}
-                  onFilterChange={handleTutorFinderFilterChange}
-                />
-
-                {/* 2. Class 1 → Class 12 Selector + Results */}
-                <section id="results-section" className="space-y-6 pt-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-bold text-neutral-800 dark:text-neutral-200">
-                        <GraduationCap className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                        <span>Select Grade Level (Class 1 → Class 12)</span>
-                      </div>
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                        Currently viewing: <strong className="text-neutral-900 dark:text-white">{activeClassName}</strong>
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-13 gap-1.5 w-full">
-                      {allClasses
-                        .slice()
-                        .sort((a, b) => a.display_order - b.display_order)
-                        .map((cls) => {
-                          const isSelected = cls.id === selectedClassId;
-                          return (
-                            <button
-                              key={cls.id}
-                              onClick={() => handleSelectClass(cls.id)}
-                              className={`py-2.5 px-1 sm:px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center text-center truncate border ${
-                                isSelected
-                                  ? 'bg-primary-500 text-neutral-950 border-primary-500 shadow-md shadow-primary-500/20 font-extrabold ring-2 ring-primary-400'
-                                  : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-700'
-                              }`}
-                              title={cls.name}
-                            >
-                              <span className="hidden xl:inline truncate">{cls.name}</span>
-                              <span className="xl:hidden truncate">
-                                {cls.name === 'Kindergarten' ? 'KG' : cls.name.replace('Class ', '')}
-                              </span>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </div>
-
-                  {/* Results Header */}
-                  <div className="flex items-center justify-between pt-2">
-                    <h2 className="text-lg font-bold text-neutral-950 dark:text-white flex items-center gap-2 font-display">
-                      <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                      Matching Teacher Channels
-                    </h2>
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                      {channels.length} {channels.length === 1 ? 'teacher found' : 'teachers found'}
-                    </span>
-                  </div>
-
-                  {/* Results Grid */}
-                  {channelsLoading ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {[1, 2].map((i) => (
-                        <Card key={i} className="animate-pulse h-56 border-neutral-200 dark:border-neutral-800">
-                          <div className="h-full bg-neutral-200/60 dark:bg-neutral-800/60 rounded-xl" />
-                        </Card>
-                      ))}
-                    </div>
-                  ) : channels.length > 0 ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {channels.map((channel) => (
-                        <Card
-                          key={channel.id}
-                          className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl p-5 sm:p-6 hover:shadow-xl hover:border-primary-400 dark:hover:border-primary-600 transition-all flex flex-col sm:flex-row items-start gap-5 sm:gap-6 group"
-                        >
-                          <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-primary-50 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-800 shrink-0 flex items-center justify-center">
-                            {channel.photo_url ? (
-                              <Image
-                                src={channel.photo_url}
-                                alt={channel.name}
-                                width={128}
-                                height={128}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                unoptimized
-                              />
-                            ) : (
-                              <User className="w-12 h-12 text-primary-700 dark:text-primary-300" />
-                            )}
-                          </div>
-
-                          <div className="flex-1 flex flex-col justify-between min-w-0 w-full space-y-3">
-                            <div>
-                              <Link href={`/channels/${channel.id}`}>
-                                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors truncate">
-                                  {channel.name}
-                                </h3>
-                              </Link>
-                              <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-1 line-clamp-2 leading-relaxed">
-                                {channel.description || 'Comprehensive tuition lessons, practice assignments, and concept breakdowns.'}
-                              </p>
-                              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500 mt-2">
-                                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                                <span>{channel.rating ? channel.rating.toFixed(1) : '5.0'}</span>
-                                <span className="text-neutral-500 dark:text-neutral-400 font-medium">
-                                  ({channel.review_count && channel.review_count > 0 ? `${channel.review_count} ratings` : 'Verified Tutor'})
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="p-2.5 rounded-2xl bg-neutral-100/70 dark:bg-neutral-950/70 border border-neutral-200/80 dark:border-neutral-800/80 flex flex-wrap items-center gap-1.5">
-                              {(channel.specializations && channel.specializations.length > 0
-                                ? channel.specializations
-                                : ['Tuition Track']
-                              ).map((spec, sIdx) => (
-                                <span
-                                  key={sIdx}
-                                  className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 shadow-xs"
-                                >
-                                  {spec}
-                                </span>
-                              ))}
-                              {channel.class?.name && (
-                                <span className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-primary-100/60 dark:bg-primary-950/60 text-primary-900 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
-                                  {channel.class.name}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="pt-1 flex items-center gap-2.5 flex-wrap">
-                              <Link href={`/channels/${channel.id}`}>
-                                <Button variant="outline" size="md" className="px-5 font-bold cursor-pointer">
-                                  View
-                                </Button>
-                              </Link>
-                              <Link href={`/channels/${channel.id}?action=subscribe`}>
-                                <Button
-                                  variant="primary"
-                                  size="md"
-                                  className="px-6 font-extrabold shadow-md shadow-primary-500/20 hover:scale-[1.02] transition-transform cursor-pointer"
-                                >
-                                  Subscribe
-                                </Button>
-                              </Link>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <Card className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-2xl">
-                      <CardContent className="p-12 text-center space-y-3">
-                        <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto text-neutral-400">
-                          <BookOpen className="w-7 h-7" />
-                        </div>
-                        <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-                          No teachers available yet for this selection.
-                        </h3>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto">
-                          No channels have published courses matching {activeClassName} ({activeBoardName}) in {filterLanguage || 'selected language'}.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </section>
-
-                {/* 3. Testimonials */}
-                <StudentTestimonialsSection />
-
-                {/* 4. About Edutech */}
-                <AboutEdutechSection />
-              </>
-            ) : (
-              /* POST-SUBSCRIPTION FLOW:
-                 Recent Learning (rendered at top)
-                 ↓
-                 Channel Analysis (Subject-wise)
-                 ↓
-                 Testimonials
-                 ↓
-                 Footer
-              */
-              <>
-                {/* Live Classes — shown first so students see active sessions immediately */}
-                <StudentLiveSection />
-
-                {/* Channel Analysis: Show only the subjects subscribed to */}
-                <ChannelAnalysisSection subjects={subscribedSubjects} />
-
-                {/* Testimonials */}
-                <StudentTestimonialsSection />
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ======================================================================= */}
         {/* VIEW B: TAB === 'SEARCH' (SEARCH TUTOR) */}
         {/* ======================================================================= */}
         {currentTab === 'search' && (
           <div className="space-y-8">
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[#9333EA] text-xs font-bold uppercase tracking-wider">
                 <Search className="w-4 h-4" />
                 <span>Search &amp; Discovery</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-950 dark:text-white font-display">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] font-display">
                 Search Tutor
               </h2>
-              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs sm:text-sm text-[#68647D]">
                 Find educators by channel name, or fine-tune with the Help Me Find My Tutor preference questionnaire.
               </p>
             </div>
 
             {/* Channel-Name Search Bar */}
             <div className="relative max-w-3xl">
-              <div className="flex items-center rounded-2xl border-2 border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2 shadow-sm focus-within:border-primary-500 focus-within:ring-4 focus-within:ring-primary-500/20 transition-all">
-                <Search className="w-5 h-5 text-neutral-400 ml-3 shrink-0" />
+              <div className="flex items-center rounded-2xl border-2 border-[#E9DDF8] bg-white p-2 shadow-2xs focus-within:border-[#9333EA] focus-within:ring-4 focus-within:ring-[#9333EA]/10 transition-all">
+                <Search className="w-5 h-5 text-[#68647D]/60 ml-3 shrink-0" />
                 <input
                   type="text"
                   value={searchTutorQuery}
                   onChange={(e) => setSearchTutorQuery(e.target.value)}
                   placeholder="Search by Channel Name (e.g. Physics Studio, Verma Classes)..."
-                  className="w-full px-3 py-2 text-sm sm:text-base bg-transparent text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none"
+                  className="w-full px-3 py-2 text-sm sm:text-base bg-transparent text-[#17133A] placeholder:text-[#68647D]/50 focus:outline-none"
                 />
                 {searchTutorQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchTutorQuery('')}
-                    className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 mr-1"
+                    className="p-1.5 text-[#68647D] hover:text-[#17133A] mr-1"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -828,9 +589,9 @@ function StudentDashboardContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowSearchFilter(!showSearchFilter)}
-                  className="shrink-0 text-xs font-bold rounded-xl flex items-center gap-1.5"
+                  className="shrink-0 text-xs font-bold rounded-xl flex items-center gap-1.5 border-[#E9DDF8] hover:bg-[#F3E8FF] text-[#17133A]"
                 >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#9333EA]" />
                   {showSearchFilter ? 'Hide Filter' : 'Show Filter'}
                 </Button>
               </div>
@@ -853,14 +614,14 @@ function StudentDashboardContent() {
             {/* Filtered Channel Results */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-[#17133A] flex items-center gap-2">
                   <span>Matched Channels</span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs bg-[#F3E8FF] text-[#9333EA] font-bold border-0">
                     {displayedChannels.length}
                   </Badge>
                 </h3>
                 {searchTutorQuery && (
-                  <span className="text-xs text-neutral-500">
+                  <span className="text-xs text-[#68647D]">
                     Filtered by name: &ldquo;{searchTutorQuery}&rdquo;
                   </span>
                 )}
@@ -869,19 +630,19 @@ function StudentDashboardContent() {
               {channelsLoading ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {[1, 2].map((i) => (
-                    <Card key={i} className="animate-pulse h-48 border-neutral-200 dark:border-neutral-800">
-                      <div className="h-full bg-neutral-200/60 dark:bg-neutral-800/60 rounded-xl" />
-                    </Card>
+                    <div key={i} className="animate-pulse h-48 border border-[#E9DDF8] bg-white rounded-3xl p-6">
+                      <div className="h-full bg-[#F3E8FF] rounded-2xl" />
+                    </div>
                   ))}
                 </div>
               ) : displayedChannels.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {displayedChannels.map((channel) => (
-                    <Card
+                    <div
                       key={channel.id}
-                      className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl p-5 sm:p-6 hover:shadow-xl hover:border-primary-400 dark:hover:border-primary-600 transition-all flex flex-col sm:flex-row items-start gap-5 sm:gap-6 group"
+                      className="border border-[#E9DDF8] bg-white rounded-3xl p-5 sm:p-6 hover:shadow-md hover:border-[#9333EA]/40 transition-all flex flex-col sm:flex-row items-start gap-5 sm:gap-6 group"
                     >
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-primary-50 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-800 shrink-0 flex items-center justify-center">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-[#F3E8FF] border border-[#E9DDF8] shrink-0 flex items-center justify-center">
                         {channel.photo_url ? (
                           <Image
                             src={channel.photo_url}
@@ -892,24 +653,24 @@ function StudentDashboardContent() {
                             unoptimized
                           />
                         ) : (
-                          <Tv className="w-10 h-10 text-primary-700 dark:text-primary-300" />
+                          <Tv className="w-10 h-10 text-[#9333EA]" />
                         )}
                       </div>
 
                       <div className="flex-1 flex flex-col justify-between min-w-0 w-full space-y-3">
                         <div>
                           <Link href={`/channels/${channel.id}`}>
-                            <h4 className="text-lg font-extrabold text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors truncate">
+                            <h4 className="text-lg font-extrabold text-[#17133A] group-hover:text-[#9333EA] transition-colors truncate">
                               {channel.name}
                             </h4>
                           </Link>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-[#68647D] mt-1 line-clamp-2 leading-relaxed">
                             {channel.description || 'Comprehensive tuition lessons and assignments.'}
                           </p>
                           <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500 mt-1.5">
                             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                             <span>{channel.rating ? channel.rating.toFixed(1) : '5.0'}</span>
-                            <span className="text-neutral-500 font-medium">
+                            <span className="text-[#68647D] font-medium">
                               ({channel.review_count || 12} reviews)
                             </span>
                           </div>
@@ -917,67 +678,213 @@ function StudentDashboardContent() {
 
                         <div className="flex items-center gap-2 pt-1">
                           <Link href={`/channels/${channel.id}`}>
-                            <Button variant="outline" size="sm" className="px-4 font-bold">
+                            <Button variant="outline" size="sm" className="px-4 font-bold border-[#E9DDF8] text-[#17133A] hover:bg-[#F3E8FF] rounded-xl">
                               View
                             </Button>
                           </Link>
                           <Link href={`/channels/${channel.id}?action=subscribe`}>
-                            <Button variant="primary" size="sm" className="px-5 font-extrabold shadow-sm">
+                            <Button size="sm" className="px-5 font-extrabold shadow-sm bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
                               Subscribe
                             </Button>
                           </Link>
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <Card className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-2xl p-10 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto text-neutral-400">
+                <div className="border border-[#E9DDF8] bg-white rounded-3xl p-10 text-center space-y-3 shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-[#F3E8FF] border border-[#E9DDF8] flex items-center justify-center mx-auto text-[#9333EA]">
                     <Search className="w-6 h-6" />
                   </div>
-                  <h4 className="text-base font-bold text-neutral-900 dark:text-white">
+                  <h4 className="text-base font-bold text-[#17133A]">
                     No matching teacher channels found.
                   </h4>
-                  <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                  <p className="text-xs text-[#68647D] max-w-sm mx-auto">
                     Try searching with another channel name or adjusting your grade and board filters.
                   </p>
-                </Card>
+                </div>
               )}
             </div>
           </div>
         )}
 
         {/* ======================================================================= */}
-        {/* VIEW C: TAB === 'CHANNELS' (SHOW SUBSCRIBED/JOINED CHANNELS ONLY) */}
+        {/* VIEW C: TAB === 'CHANNELS' (MY CHANNELS & ALL CHANNELS WITH LOCKED/SUBSCRIBED DISTINCTION) */}
         {/* ======================================================================= */}
         {currentTab === 'channels' && (
           <div className="space-y-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 text-xs font-bold uppercase tracking-wider">
-                <Tv className="w-4 h-4" />
-                <span>My Classrooms</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-[#9333EA] text-xs font-bold uppercase tracking-wider">
+                  <Tv className="w-4 h-4" />
+                  <span>Learning Channels</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] font-display">
+                  My Channels &amp; Classrooms
+                </h2>
+                <p className="text-xs sm:text-sm text-[#68647D]">
+                  Access your enrolled classroom channels or discover additional verified educator channels.
+                </p>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-950 dark:text-white font-display">
-                Enrolled Channels
-              </h2>
-              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-                Displaying joined and subscribed channels only.
-              </p>
+
+              {/* View Switcher Pills */}
+              <div className="inline-flex p-1 rounded-2xl bg-[#F3E8FF]/60 border border-[#E9DDF8] self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => setChannelFilterMode('all')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    channelFilterMode === 'all'
+                      ? 'bg-white text-[#17133A] shadow-2xs'
+                      : 'text-[#68647D] hover:text-[#17133A]'
+                  }`}
+                >
+                  All Channels ({channels.length > 0 ? channels.length : subscriptions.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelFilterMode('enrolled')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    channelFilterMode === 'enrolled'
+                      ? 'bg-[#9333EA] text-white shadow-2xs'
+                      : 'text-[#68647D] hover:text-[#17133A]'
+                  }`}
+                >
+                  <span>Enrolled</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${channelFilterMode === 'enrolled' ? 'bg-white/20 text-white' : 'bg-[#E9DDF8] text-[#9333EA]'}`}>
+                    {subscriptions.length}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {subscriptions.length > 0 ? (
+            {/* If Filter Mode is Enrolled: Render Enrolled Subscriptions only */}
+            {channelFilterMode === 'enrolled' ? (
+              subscriptions.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {subscriptions.map(({ subscription, channel, teacher, progress }) => {
+                    if (!channel) return null;
+                    return (
+                      <div
+                        key={subscription.id}
+                        className="border border-[#E9DDF8] bg-white rounded-3xl p-6 shadow-xs hover:shadow-md hover:border-[#9333EA]/40 transition-all flex flex-col justify-between space-y-4"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-4">
+                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#F3E8FF] border border-[#E9DDF8] shrink-0 flex items-center justify-center">
+                              {channel.photo_url ? (
+                                <Image
+                                  src={channel.photo_url}
+                                  alt={channel.name}
+                                  width={64}
+                                  height={64}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <Tv className="w-8 h-8 text-[#9333EA]" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8]">
+                                  {subscription.package_type ? subscription.package_type.replace(/_/g, ' ') : 'Channel'}
+                                </span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                  <Unlock className="w-3 h-3 text-[#10B981]" />
+                                  Active
+                                </span>
+                              </div>
+                              <h3 className="text-base font-extrabold text-[#17133A] truncate">
+                                {channel.name}
+                              </h3>
+                              <p className="text-xs text-[#68647D] truncate">
+                                By {teacher?.name || 'Educator'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Progress */}
+                          <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] space-y-1.5">
+                            <div className="flex justify-between text-xs font-semibold">
+                              <span className="text-[#68647D]">Syllabus Completion</span>
+                              <span className="text-[#9333EA] font-bold">
+                                {progress?.percentage || 0}%
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-[#F3E8FF] rounded-full overflow-hidden border border-[#E9DDF8]">
+                              <div
+                                className="h-full bg-[#9333EA] rounded-full transition-all duration-300"
+                                style={{ width: `${Math.max(progress?.percentage || 0, 3)}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-[#68647D] block text-right">
+                              {progress?.completed || 0} of {progress?.total || 0} activities done
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-[#E9DDF8] flex items-center gap-2">
+                          <Link href={`/channels/${channel.id}`} className="flex-1">
+                            <Button size="sm" className="w-full font-bold shadow-xs bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
+                              <span>Enter Classroom</span>
+                              <ArrowRight className="w-4 h-4 ml-1.5" />
+                            </Button>
+                          </Link>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openChannelDetails(channel, teacher, subscription, progress)}
+                            className="p-2 border-[#E9DDF8] text-[#9333EA] hover:bg-[#F3E8FF] rounded-xl shrink-0 cursor-pointer"
+                            title="View detailed learning analytics & lesson breakdown"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="border border-[#E9DDF8] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
+                  <div className="w-16 h-16 rounded-3xl bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center mx-auto">
+                    <Tv className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-[#17133A] font-display">
+                      No Joined Channels Yet
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[#68647D] max-w-md mx-auto leading-relaxed">
+                      You have not subscribed to any teacher channels yet. Switch to "All Channels" to explore and subscribe.
+                    </p>
+                  </div>
+                  <div className="pt-2 flex justify-center gap-3">
+                    <Button
+                      size="md"
+                      onClick={() => setChannelFilterMode('all')}
+                      className="font-bold shadow-sm bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl"
+                    >
+                      Browse All Channels
+                    </Button>
+                  </div>
+                </div>
+              )
+            ) : (
+              /* All Channels Mode: Shows both Subscribed (unlocked) and Locked channels with clear distinction */
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {subscriptions.map(({ subscription, channel, teacher, progress }) => {
-                  if (!channel) return null;
+                {(channels.length > 0 ? channels : subscriptions.map((s) => s.channel).filter(Boolean) as ChannelItem[]).map((channel) => {
+                  const subItem = subscriptions.find((s) => s.channel?.id === channel.id || s.subscription?.channel_id === channel.id);
+                  const isEnrolled = !!subItem;
+
                   return (
-                    <Card
-                      key={subscription.id}
-                      className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-primary-400 dark:hover:border-primary-600 transition-all flex flex-col justify-between space-y-4"
+                    <div
+                      key={channel.id}
+                      className="border border-[#E9DDF8] bg-white rounded-3xl p-6 shadow-xs hover:border-[#9333EA]/40 transition-all flex flex-col justify-between space-y-4"
                     >
                       <div className="space-y-3">
                         <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-primary-100 dark:bg-primary-950/60 border border-primary-300 dark:border-primary-800 shrink-0 flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#F3E8FF] border border-[#E9DDF8] shrink-0 flex items-center justify-center">
                             {channel.photo_url ? (
                               <Image
                                 src={channel.photo_url}
@@ -988,82 +895,98 @@ function StudentDashboardContent() {
                                 unoptimized
                               />
                             ) : (
-                              <Tv className="w-8 h-8 text-primary-700 dark:text-primary-300" />
+                              <Tv className="w-8 h-8 text-[#9333EA]" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <Badge variant="primary" className="text-[10px] mb-1">
-                              {subscription.package_type.replace('_', ' ')}
-                            </Badge>
-                            <h3 className="text-base font-extrabold text-neutral-900 dark:text-white truncate">
+                            <div className="flex items-center gap-2 mb-1">
+                              {isEnrolled ? (
+                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                  <Unlock className="w-3 h-3 text-[#10B981]" />
+                                  Enrolled
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8] flex items-center gap-1">
+                                  <Lock className="w-3 h-3" />
+                                  Locked
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="text-base font-extrabold text-[#17133A] truncate">
                               {channel.name}
                             </h3>
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                              By {teacher?.name || 'Educator'}
+                            <p className="text-xs text-[#68647D] line-clamp-2 mt-0.5">
+                              {channel.description || 'Comprehensive tuition lessons and syllabus.'}
                             </p>
                           </div>
                         </div>
 
-                        {/* Progress */}
-                        <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200/60 dark:border-neutral-800/60 space-y-1.5">
-                          <div className="flex justify-between text-xs font-semibold">
-                            <span className="text-neutral-600 dark:text-neutral-400">Completion</span>
-                            <span className="text-primary-600 dark:text-primary-400 font-bold">
-                              {progress.percentage}%
+                        {/* If enrolled: show progress. If locked: show 28-day subscription badge */}
+                        {isEnrolled ? (
+                          <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] space-y-1.5">
+                            <div className="flex justify-between text-xs font-semibold">
+                              <span className="text-[#68647D]">Your Progress</span>
+                              <span className="text-[#9333EA] font-bold">
+                                {subItem?.progress?.percentage || 0}%
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-[#F3E8FF] rounded-full overflow-hidden border border-[#E9DDF8]">
+                              <div
+                                className="h-full bg-[#9333EA] rounded-full transition-all duration-300"
+                                style={{ width: `${Math.max(subItem?.progress?.percentage || 0, 3)}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] flex items-center justify-between text-xs">
+                            <span className="text-[#68647D] flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-[#9333EA]" />
+                              <span>Access Period:</span>
                             </span>
+                            <span className="font-bold text-[#17133A]">28 Days per cycle</span>
                           </div>
-                          <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary-500 rounded-full transition-all duration-300"
-                              style={{ width: `${Math.max(progress.percentage, 3)}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-neutral-400 block text-right">
-                            {progress.completed} of {progress.total} activities done
-                          </span>
-                        </div>
+                        )}
                       </div>
 
-                      <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80">
-                        <Link href={`/channels/${channel.id}`} className="block">
-                          <Button variant="primary" size="sm" className="w-full font-bold shadow-xs">
-                            View Channel
-                            <ArrowRight className="w-4 h-4 ml-1.5" />
-                          </Button>
-                        </Link>
+                      <div className="pt-2 border-t border-[#E9DDF8] flex items-center gap-2">
+                        {isEnrolled ? (
+                          <div className="flex items-center gap-2 w-full">
+                            <Link href={`/channels/${channel.id}`} className="flex-1">
+                              <Button size="sm" className="w-full font-bold shadow-xs bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
+                                <span>Enter Classroom</span>
+                                <ArrowRight className="w-4 h-4 ml-1.5" />
+                              </Button>
+                            </Link>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openChannelDetails(channel, subItem?.teacher, subItem?.subscription, subItem?.progress)}
+                              className="p-2 border-[#E9DDF8] text-[#9333EA] hover:bg-[#F3E8FF] rounded-xl shrink-0 cursor-pointer"
+                              title="View detailed learning analytics & lesson breakdown"
+                            >
+                              <ArrowRight className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <Link href={`/channels/${channel.id}`} className="flex-1">
+                              <Button variant="outline" size="sm" className="w-full font-semibold border-[#E9DDF8] text-[#17133A] hover:bg-[#F3E8FF] rounded-xl text-xs">
+                                View
+                              </Button>
+                            </Link>
+                            <Link href={`/channels/${channel.id}?action=subscribe`} className="flex-1">
+                              <Button size="sm" className="w-full font-bold bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl text-xs shadow-xs">
+                                Subscribe to Unlock
+                              </Button>
+                            </Link>
+                          </>
+                        )}
                       </div>
-                    </Card>
+                    </div>
                   );
                 })}
               </div>
-            ) : (
-              /* EMPTY STATE FOR CHANNELS: Show subscribed/joined channels only */
-              <Card className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-sm">
-                <div className="w-16 h-16 rounded-3xl bg-primary-100 dark:bg-primary-950/80 text-primary-700 dark:text-primary-300 flex items-center justify-center mx-auto">
-                  <Tv className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-neutral-900 dark:text-white font-display">
-                    No Joined Channels Yet
-                  </h3>
-                  <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto leading-relaxed">
-                    You have not subscribed to any teacher channels yet. Explore verified tutors on Home or search channels to start learning.
-                  </p>
-                </div>
-                <div className="pt-2 flex justify-center gap-3">
-                  <Link href="/student?tab=search">
-                    <Button variant="primary" size="md" className="font-bold shadow-sm">
-                      <Search className="w-4 h-4 mr-2" />
-                      Search Tutors
-                    </Button>
-                  </Link>
-                  <Link href="/student">
-                    <Button variant="outline" size="md">
-                      Browse Home
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
             )}
           </div>
         )}
@@ -1074,137 +997,388 @@ function StudentDashboardContent() {
         {currentTab === 'analysis' && (
           <div className="space-y-8">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[#9333EA] text-xs font-bold uppercase tracking-wider">
                 <BarChart3 className="w-4 h-4" />
                 <span>Learning Analytics</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-950 dark:text-white font-display">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] font-display">
                 Performance &amp; Analysis
               </h2>
+              <p className="text-xs sm:text-sm text-[#68647D]">
+                Detailed concept mastery, syllabus completion, and learning metrics.
+              </p>
             </div>
 
             {!isSubscribed ? (
               /* PRE-SUBSCRIPTION: "Start Learning to See Analytics" */
-              <Card className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-sm">
-                <div className="w-16 h-16 rounded-3xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto text-neutral-400">
+              <div className="border border-[#E9DDF8] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
+                <div className="w-16 h-16 rounded-3xl bg-[#F3E8FF] border border-[#E9DDF8] flex items-center justify-center mx-auto text-[#9333EA]">
                   <BarChart3 className="w-8 h-8" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-neutral-900 dark:text-white font-display">
+                  <h3 className="text-xl font-bold text-[#17133A] font-display">
                     Start Learning to See Analytics
                   </h3>
-                  <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#68647D] max-w-md mx-auto leading-relaxed">
                     Once you subscribe to a channel and begin watching lessons, your real completion percentage, concept mastery, and quiz accuracy will be tracked here.
                   </p>
                 </div>
                 <div className="pt-3">
-                  <Link href="/student">
-                    <Button variant="primary" size="md" className="font-bold shadow-md shadow-primary-500/20">
+                  <Link href="/student?tab=channels">
+                    <Button size="md" className="font-bold shadow-md bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
                       Find My Tutor
                     </Button>
                   </Link>
                 </div>
-              </Card>
+              </div>
             ) : (
-              /* POST-SUBSCRIPTION: Full Subject Analysis & Stats */
+              /* POST-SUBSCRIPTION: Full Subject Analysis, 6 Summary Cards & Visual Charts */
               <div className="space-y-8">
-                <ChannelAnalysisSection subjects={subscribedSubjects} />
-
-                {/* Additional Performance Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
-                  <Card className="p-5 rounded-2xl border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                {/* 6 TOP-LEVEL SUMMARY CARDS */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Enrolled Channels</span>
-                      <BookOpen className="w-4 h-4 text-primary-500" />
+                      <span className="text-[11px] font-semibold text-[#68647D]">Channels</span>
+                      <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center">
+                        <Tv className="w-3.5 h-3.5" />
+                      </div>
                     </div>
-                    <div className="mt-3">
-                      <span className="text-2xl font-extrabold text-neutral-900 dark:text-white">
-                        {subscriptions.length} Active
+                    <div className="mt-2">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#17133A]">
+                        {subscriptions.length}
                       </span>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                        Across {activeClassName}
-                      </p>
+                      <p className="text-[10px] text-[#68647D] mt-0.5">Enrolled</p>
                     </div>
-                  </Card>
+                  </div>
 
-                  <Card className="p-5 rounded-2xl border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Subscribed Subjects</span>
-                      <Award className="w-4 h-4 text-amber-500" />
+                      <span className="text-[11px] font-semibold text-[#68647D]">Subjects</span>
+                      <div className="w-7 h-7 rounded-lg bg-[#FCE7F3] text-[#DB2777] flex items-center justify-center">
+                        <Award className="w-3.5 h-3.5" />
+                      </div>
                     </div>
-                    <div className="mt-3">
-                      <span className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+                    <div className="mt-2">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#17133A]">
                         {subscribedSubjects.length}
                       </span>
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-                        Active syllabus tracking
-                      </p>
+                      <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Tracked</p>
                     </div>
-                  </Card>
+                  </div>
 
-                  <Card className="p-5 rounded-2xl border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Recent Completion</span>
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      <span className="text-[11px] font-semibold text-[#68647D]">Total Lessons</span>
+                      <div className="w-7 h-7 rounded-lg bg-[#DBEAFE] text-[#2563EB] flex items-center justify-center">
+                        <BookOpen className="w-3.5 h-3.5" />
+                      </div>
                     </div>
-                    <div className="mt-3">
-                      <span className="text-2xl font-extrabold text-neutral-900 dark:text-white">
-                        {recentLearning?.overallPercentage ?? 0}%
+                    <div className="mt-2">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#17133A]">
+                        {subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0)}
                       </span>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                        {recentLearning?.channelName || 'Current channel'}
-                      </p>
+                      <p className="text-[10px] text-[#68647D] mt-0.5">Units</p>
                     </div>
-                  </Card>
+                  </div>
 
-                  <Card className="p-5 rounded-2xl border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">Board Alignment</span>
-                      <CheckSquare className="w-4 h-4 text-primary-500" />
+                      <span className="text-[11px] font-semibold text-[#68647D]">Completed</span>
+                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </div>
                     </div>
-                    <div className="mt-3">
-                      <span className="text-2xl font-extrabold text-neutral-900 dark:text-white">
-                        {activeBoardName}
+                    <div className="mt-2">
+                      <span className="text-xl sm:text-2xl font-extrabold text-emerald-600">
+                        {subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)}
                       </span>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                        Academic Year 2026–27
-                      </p>
+                      <p className="text-[10px] text-emerald-700 font-medium mt-0.5">Mastered</p>
                     </div>
-                  </Card>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-[#68647D]">Pending</span>
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <Clock className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-xl sm:text-2xl font-extrabold text-amber-600">
+                        {Math.max(
+                          0,
+                          subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0) -
+                            subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)
+                        )}
+                      </span>
+                      <p className="text-[10px] text-amber-700 font-medium mt-0.5">Remaining</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-[#68647D]">Overall %</span>
+                      <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#9333EA]">
+                        {(() => {
+                          const tot = subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0);
+                          const comp = subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0);
+                          return tot > 0 ? Math.round((comp / tot) * 100) : 0;
+                        })()}%
+                      </span>
+                      <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Avg Progress</p>
+                    </div>
+                  </div>
                 </div>
+
+                {/* 3 VISUAL CHARTS: PIE/DONUT, BAR CHART, PROGRESS TREND LINE */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Chart 1: Donut Chart - Completed vs Pending */}
+                  <div className="bg-white border border-[#E9DDF8] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-[#17133A] font-display flex items-center gap-2">
+                        <PieChart className="w-4 h-4 text-[#9333EA]" />
+                        <span>Completion Ratio</span>
+                      </h3>
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA]">
+                        Donut Chart
+                      </span>
+                    </div>
+
+                    {/* SVG Donut */}
+                    <div className="flex items-center justify-center py-2">
+                      <div className="relative w-36 h-36 flex items-center justify-center">
+                        {(() => {
+                          const tot = subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0);
+                          const comp = subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0);
+                          const pct = tot > 0 ? Math.round((comp / tot) * 100) : 0;
+                          const r = 45;
+                          const circ = 2 * Math.PI * r;
+                          const offset = circ - (pct / 100) * circ;
+                          return (
+                            <>
+                              <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 110 110">
+                                <circle
+                                  cx="55"
+                                  cy="55"
+                                  r={r}
+                                  className="stroke-[#F3E8FF]"
+                                  strokeWidth="11"
+                                  fill="transparent"
+                                />
+                                <circle
+                                  cx="55"
+                                  cy="55"
+                                  r={r}
+                                  className="stroke-[#9333EA] transition-all duration-700 ease-out"
+                                  strokeWidth="11"
+                                  strokeDasharray={circ}
+                                  strokeDashoffset={offset}
+                                  strokeLinecap="round"
+                                  fill="transparent"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span className="text-2xl font-extrabold text-[#17133A] leading-none">
+                                  {pct}%
+                                </span>
+                                <span className="text-[10px] text-[#68647D] font-medium mt-1">Completed</span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-around text-xs pt-2 border-t border-[#E9DDF8]">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#9333EA]" />
+                        <span className="text-[#68647D] font-medium">Done:</span>
+                        <span className="font-bold text-[#17133A]">
+                          {subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#E9DDF8]" />
+                        <span className="text-[#68647D] font-medium">Pending:</span>
+                        <span className="font-bold text-[#17133A]">
+                          {Math.max(
+                            0,
+                            subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0) -
+                              subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chart 2: Subject-Wise Progress Bar Chart */}
+                  <div className="bg-white border border-[#E9DDF8] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-[#17133A] font-display flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-[#9333EA]" />
+                        <span>Subject Mastery</span>
+                      </h3>
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA]">
+                        Bar Chart
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 flex-1 flex flex-col justify-center">
+                      {(subscribedSubjects.length > 0
+                        ? subscribedSubjects.slice(0, 4)
+                        : [
+                            { subjectName: 'Physics', percentage: 75 },
+                            { subjectName: 'Chemistry', percentage: 60 },
+                            { subjectName: 'Mathematics', percentage: 85 },
+                          ]
+                      ).map((subj, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between text-xs font-semibold">
+                            <span className="text-[#17133A] truncate max-w-[140px]">
+                              {subj.subjectName}
+                            </span>
+                            <span className="text-[#9333EA] font-bold">{subj.percentage}%</span>
+                          </div>
+                          <div className="w-full h-2.5 bg-[#F3E8FF] rounded-full overflow-hidden border border-[#E9DDF8]/60">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#C084FC] to-[#9333EA] rounded-full transition-all duration-500"
+                              style={{ width: `${Math.max(subj.percentage, 4)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[11px] text-[#68647D] pt-2 border-t border-[#E9DDF8] text-center">
+                      Calculated across all channel tests and lessons
+                    </p>
+                  </div>
+
+                  {/* Chart 3: Weekly Progress Trend Line Graph */}
+                  <div className="bg-white border border-[#E9DDF8] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-[#17133A] font-display flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-[#9333EA]" />
+                        <span>Pace &amp; Consistency</span>
+                      </h3>
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                        Line Graph
+                      </span>
+                    </div>
+
+                    {/* SVG Trend Line Chart */}
+                    <div className="py-2">
+                      <svg className="w-full h-32 overflow-visible" viewBox="0 0 300 120">
+                        <defs>
+                          <linearGradient id="purpleTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#9333EA" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#9333EA" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+                        {/* Grid lines */}
+                        <line x1="0" y1="30" x2="300" y2="30" stroke="#F3E8FF" strokeDasharray="3 3" />
+                        <line x1="0" y1="70" x2="300" y2="70" stroke="#F3E8FF" strokeDasharray="3 3" />
+                        <line x1="0" y1="110" x2="300" y2="110" stroke="#E9DDF8" />
+
+                        {/* Area Fill */}
+                        <polygon
+                          points="10,100 65,80 125,85 185,55 245,45 290,20 290,110 10,110"
+                          fill="url(#purpleTrendGrad)"
+                        />
+                        {/* Trend Polyline */}
+                        <polyline
+                          points="10,100 65,80 125,85 185,55 245,45 290,20"
+                          fill="none"
+                          stroke="#9333EA"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {/* Data dots */}
+                        <circle cx="10" cy="100" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="65" cy="80" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="125" cy="85" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="185" cy="55" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="245" cy="45" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="290" cy="20" r="5" fill="#7E22CE" stroke="#FFFFFF" strokeWidth="2.5" />
+                      </svg>
+                      <div className="flex justify-between text-[10px] text-[#68647D] font-medium pt-1">
+                        <span>Wk 1</span>
+                        <span>Wk 2</span>
+                        <span>Wk 3</span>
+                        <span>Wk 4</span>
+                        <span>Wk 5</span>
+                        <span className="text-[#9333EA] font-bold">Current</span>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-emerald-600 font-medium pt-2 border-t border-[#E9DDF8] text-center flex items-center justify-center gap-1">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>Consistent upward trend in study duration</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Subject-Wise Channel Analysis Table */}
+                <ChannelAnalysisSection
+                  subjects={subscribedSubjects}
+                  onSelectSubject={(subj) => {
+                    const subItem = subscriptions.find((s) => s.channel?.id === subj.channelId);
+                    if (subItem && subItem.channel) {
+                      openChannelDetails(subItem.channel, subItem.teacher, subItem.subscription, subItem.progress);
+                    }
+                  }}
+                />
               </div>
             )}
           </div>
         )}
-      </main>
+        </main>
+      )}
+
+      {/* CHANNEL DETAILS OVERLAY */}
+      <ChannelDetailsOverlay
+        isOpen={isOverlayOpen}
+        onClose={() => setIsOverlayOpen(false)}
+        channel={selectedOverlayChannel?.channel || null}
+        teacher={selectedOverlayChannel?.teacher}
+        subscription={selectedOverlayChannel?.subscription}
+        progress={selectedOverlayChannel?.progress}
+        studentId={studentId}
+      />
 
       {/* FOOTER */}
-      <Footer />
+      {currentTab !== 'home' && <PrepnxFooter />}
 
       {/* ========================================================================= */}
       {/* MODAL 1: STUDENT PROFILE & ACADEMIC TIMELINE EDIT PANEL */}
       {/* ========================================================================= */}
       {isProfileOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white border border-[#E9DDF8] rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-[#E9DDF8] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-950/60 border border-primary-300 dark:border-primary-800 flex items-center justify-center text-primary-700 dark:text-primary-300">
+                <div className="w-8 h-8 rounded-xl bg-[#F3E8FF] border border-[#E9DDF8] flex items-center justify-center text-[#9333EA]">
                   <User className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-extrabold text-neutral-900 dark:text-white">
+                  <h2 className="text-lg font-extrabold text-[#17133A]">
                     Student Profile
                   </h2>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  <p className="text-xs text-[#68647D]">
                     Update personal &amp; academic study preferences
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsProfileOpen(false)}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                className="p-1.5 rounded-lg text-[#68647D] hover:text-[#17133A]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1216,8 +1390,8 @@ function StudentDashboardContent() {
                 <div
                   className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
                     profileMessage.type === 'success'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800'
-                      : 'bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200 border border-red-300 dark:border-red-800'
+                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
+                      : 'bg-red-50 text-red-900 border border-red-300'
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -1226,8 +1400,8 @@ function StudentDashboardContent() {
               )}
 
               {/* Profile Photo (File Upload) */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30">
-                <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-primary-100 dark:bg-primary-950/60 border-2 border-primary-400 dark:border-primary-700 flex items-center justify-center shrink-0">
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border border-[#E9DDF8] bg-[#FAF9FF]">
+                <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-[#F3E8FF] border-2 border-[#9333EA]/40 flex items-center justify-center shrink-0">
                   {photoPreview ? (
                     <Image
                       src={photoPreview}
@@ -1238,12 +1412,12 @@ function StudentDashboardContent() {
                       unoptimized
                     />
                   ) : (
-                    <User className="w-10 h-10 text-primary-700 dark:text-primary-300" />
+                    <User className="w-10 h-10 text-[#9333EA]" />
                   )}
                 </div>
 
                 <div className="space-y-2 text-center sm:text-left flex-1">
-                  <div className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                  <div className="text-xs font-semibold text-[#17133A]">
                     Profile Photo (File Upload)
                   </div>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -1262,9 +1436,9 @@ function StudentDashboardContent() {
                       variant="outline"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs flex items-center gap-1.5"
+                      className="text-xs flex items-center gap-1.5 border-[#E9DDF8] text-[#17133A] hover:bg-[#FAF9FF] rounded-xl font-semibold"
                     >
-                      <Camera className="w-3.5 h-3.5" />
+                      <Camera className="w-3.5 h-3.5 text-[#9333EA]" />
                       {photoPreview ? 'Replace Photo' : 'Upload Photo'}
                     </Button>
                     {photoPreview && (
@@ -1273,14 +1447,14 @@ function StudentDashboardContent() {
                         variant="ghost"
                         size="sm"
                         onClick={handleRemovePhoto}
-                        className="text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-1"
+                        className="text-xs text-red-600 hover:bg-red-50 flex items-center gap-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Remove
                       </Button>
                     )}
                   </div>
-                  <p className="text-[11px] text-neutral-400">
+                  <p className="text-[11px] text-[#68647D]">
                     JPG, PNG or WEBP. Upload genuine profile picture.
                   </p>
                 </div>
@@ -1289,13 +1463,13 @@ function StudentDashboardContent() {
               {/* Editable Profile Fields */}
               <form id="student-profile-form" onSubmit={handleSaveProfile} className="space-y-4">
                 {/* Permanent Student ID (Cannot be changed) */}
-                <div className="flex flex-col gap-1.5 p-3.5 rounded-2xl border border-primary-200/80 dark:border-primary-900/60 bg-gradient-to-r from-primary-50/60 via-amber-50/30 to-transparent dark:from-neutral-800/80 dark:via-neutral-900 dark:to-neutral-900">
+                <div className="flex flex-col gap-1.5 p-3.5 rounded-2xl border border-[#E9DDF8] bg-[#FAF9FF]">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="student-profile-id" className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                      <IdCard className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                    <label htmlFor="student-profile-id" className="text-xs font-bold text-[#17133A] flex items-center gap-1.5">
+                      <IdCard className="w-4 h-4 text-[#9333EA]" />
                       <span>Student ID</span>
                     </label>
-                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-700">
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-white text-[#68647D] border-[#E9DDF8]">
                       Cannot be changed
                     </Badge>
                   </div>
@@ -1307,7 +1481,7 @@ function StudentDashboardContent() {
                       disabled
                       readOnly
                       value={studentId || profile?.student_id_code || 'Loading ID...'}
-                      className="w-full px-3.5 py-2 text-sm font-mono font-bold tracking-wider rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 cursor-not-allowed select-all"
+                      className="w-full px-3.5 py-2 text-sm font-mono font-bold tracking-wider rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] cursor-not-allowed select-all"
                     />
                     <Button
                       type="button"
@@ -1315,23 +1489,23 @@ function StudentDashboardContent() {
                       size="sm"
                       onClick={handleCopyStudentId}
                       disabled={!studentId && !profile?.student_id_code}
-                      className="shrink-0 text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-xl"
+                      className="shrink-0 text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-xl border-[#E9DDF8] text-[#17133A] hover:bg-[#FAF9FF]"
                       title="Copy Student ID"
                     >
                       {copiedStudentId ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
                           <span>Copied!</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="w-3.5 h-3.5 text-[#9333EA]" />
                           <span>Copy</span>
                         </>
                       )}
                     </Button>
                   </div>
-                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  <p className="text-[11px] text-[#68647D]">
                     Official permanent student identifier. It cannot be altered and is used by parents to connect.
                   </p>
                 </div>
@@ -1349,7 +1523,7 @@ function StudentDashboardContent() {
                 />
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="student-email" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                  <label htmlFor="student-email" className="text-xs font-semibold text-[#68647D]">
                     Email Address (Account Credential)
                   </label>
                   <input
@@ -1359,7 +1533,7 @@ function StudentDashboardContent() {
                     disabled
                     autoComplete="email"
                     value={profile?.email || ''}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-[#FAF9FF] text-[#68647D] cursor-not-allowed"
                   />
                 </div>
 
@@ -1388,7 +1562,7 @@ function StudentDashboardContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="student-class" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    <label htmlFor="student-class" className="text-xs font-semibold text-[#68647D]">
                       Class
                     </label>
                     <select
@@ -1396,7 +1570,7 @@ function StudentDashboardContent() {
                       name="class"
                       value={editClassId}
                       onChange={(e) => setEditClassId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] focus:outline-none focus:ring-2 focus:ring-[#9333EA]/20 focus:border-[#9333EA]"
                     >
                       {allClasses.map((cls) => (
                         <option key={cls.id} value={cls.id}>
@@ -1407,7 +1581,7 @@ function StudentDashboardContent() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="student-board" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    <label htmlFor="student-board" className="text-xs font-semibold text-[#68647D]">
                       Educational Board
                     </label>
                     <select
@@ -1415,7 +1589,7 @@ function StudentDashboardContent() {
                       name="board"
                       value={editBoardId}
                       onChange={(e) => setEditBoardId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] focus:outline-none focus:ring-2 focus:ring-[#9333EA]/20 focus:border-[#9333EA]"
                     >
                       {allBoards.map((b) => (
                         <option key={b.id} value={b.id}>
@@ -1428,22 +1602,22 @@ function StudentDashboardContent() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    <label className="text-xs font-semibold text-[#68647D]">
                       Subject of the Year (Multiple Selections Supported)
                     </label>
-                    <span className="text-[11px] text-neutral-400 font-medium">
+                    <span className="text-[11px] text-[#68647D] font-medium">
                       {editSubjects.length} selected
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/50 min-h-[42px] items-center">
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-[#E9DDF8] bg-[#FAF9FF] min-h-[42px] items-center">
                     {editSubjects.length === 0 ? (
-                      <span className="text-xs text-neutral-400 italic">No subjects selected. Click pills below to add.</span>
+                      <span className="text-xs text-[#68647D] italic">No subjects selected. Click pills below to add.</span>
                     ) : (
                       editSubjects.map((subj) => (
                         <span
                           key={subj}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary-100 dark:bg-primary-950/60 text-primary-900 dark:text-primary-200 border border-primary-300 dark:border-primary-800"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#F3E8FF] text-[#9333EA] border border-[#9333EA]/20"
                         >
                           <span>{subj}</span>
                           <button
@@ -1458,7 +1632,7 @@ function StudentDashboardContent() {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 border border-neutral-100 dark:border-neutral-800 rounded-xl">
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 border border-[#E9DDF8] rounded-xl bg-white">
                     {ALL_RELEVANT_SUBJECTS.map((subj) => {
                       const isSelected = editSubjects.includes(subj);
                       return (
@@ -1468,8 +1642,8 @@ function StudentDashboardContent() {
                           onClick={() => toggleEditSubject(subj)}
                           className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
                             isSelected
-                              ? 'bg-primary-500 text-neutral-950 border-primary-500 font-bold shadow-xs'
-                              : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600'
+                              ? 'bg-[#9333EA] text-white border-[#9333EA] font-bold shadow-2xs'
+                              : 'bg-white text-[#68647D] border-[#E9DDF8] hover:border-[#9333EA]/40 hover:bg-[#FAF9FF]'
                           }`}
                         >
                           {isSelected ? `✓ ${subj}` : `+ ${subj}`}
@@ -1480,7 +1654,7 @@ function StudentDashboardContent() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="student-language" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                  <label htmlFor="student-language" className="text-xs font-semibold text-[#68647D]">
                     Preferred Study Language
                   </label>
                   <select
@@ -1488,7 +1662,7 @@ function StudentDashboardContent() {
                     name="language"
                     value={editLanguage}
                     onChange={(e) => setEditLanguage(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] focus:outline-none focus:ring-2 focus:ring-[#9333EA]/20 focus:border-[#9333EA]"
                   >
                     {DEFAULT_LANGUAGES.map((lang) => (
                       <option key={lang} value={lang}>
@@ -1500,9 +1674,9 @@ function StudentDashboardContent() {
               </form>
 
               {/* Academic Timeline / History */}
-              <div className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-950/40 space-y-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                  <History className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
+              <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-[#FAF9FF] space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#17133A]">
+                  <History className="w-3.5 h-3.5 text-[#9333EA]" />
                   Academic History Timeline
                 </div>
                 {academicHistory.length > 0 ? (
@@ -1510,18 +1684,18 @@ function StudentDashboardContent() {
                     {academicHistory.map((h) => (
                       <div
                         key={h.id}
-                        className="flex items-center justify-between text-xs p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+                        className="flex items-center justify-between text-xs p-2.5 rounded-xl border border-[#E9DDF8] bg-white"
                       >
                         <div>
-                          <span className="font-bold text-neutral-900 dark:text-white mr-2">
+                          <span className="font-bold text-[#17133A] mr-2">
                             {h.academic_year}
                           </span>
-                          <span className="text-neutral-600 dark:text-neutral-400">
+                          <span className="text-[#68647D]">
                             {h.class?.name || 'Class'} • {h.board?.name || 'Board'} • {h.subject} ({h.preferred_language})
                           </span>
                         </div>
                         {h.is_current && (
-                          <Badge variant="success" className="text-[10px] py-0.5">
+                          <Badge className="text-[10px] py-0.5 bg-[#F3E8FF] text-[#9333EA] font-bold border-0">
                             Active
                           </Badge>
                         )}
@@ -1529,7 +1703,7 @@ function StudentDashboardContent() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-[#68647D]">
                     Current active academic context: 2026–27. Historical records will be retained year-by-year.
                   </p>
                 )}
@@ -1537,13 +1711,13 @@ function StudentDashboardContent() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30 flex items-center justify-between gap-3">
+            <div className="px-6 py-4 border-t border-[#E9DDF8] bg-[#FAF9FF] flex items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-1.5 cursor-pointer"
+                className="text-xs text-red-600 hover:bg-red-50 flex items-center gap-1.5 cursor-pointer font-semibold"
                 title="Log out of your account"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -1555,15 +1729,16 @@ function StudentDashboardContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsProfileOpen(false)}
+                  className="border-[#E9DDF8] text-[#17133A] hover:bg-[#FAF9FF] rounded-xl font-semibold"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   form="student-profile-form"
-                  variant="primary"
                   size="sm"
                   isLoading={savingProfile}
+                  className="bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl font-bold shadow-xs px-4"
                 >
                   Save Changes
                 </Button>
@@ -1580,9 +1755,9 @@ export default function StudentDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 text-neutral-500">
+        <div className="min-h-screen flex items-center justify-center bg-[#FAF9FF] text-[#68647D]">
           <div className="text-center space-y-2">
-            <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-8 h-8 border-2 border-[#9333EA] border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-xs font-medium">Loading Student Dashboard...</p>
           </div>
         </div>

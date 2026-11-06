@@ -55,6 +55,46 @@
   --color-warning: #fff9e6;
   --color-error: #fff1f1;
 
+  --color-brand-50: #FAF5FF;
+  --color-brand-100: #F3E8FF;
+  --color-brand-200: #E9D5FF;
+  --color-brand-300: #D8B4FE;
+  --color-brand-400: #C084FC;
+  --color-brand-500: #A855F7;
+  --color-brand-600: #9333EA;
+  --color-brand-700: #7E22CE;
+  --color-brand-800: #6B21A8;
+  --color-brand-900: #581C87;
+
+  --color-navy-900: #17143A;
+  --color-navy-800: #1E1B4B;
+  --color-navy-700: #2A2756;
+  --color-navy-600: #3D3A68;
+  --color-navy-500: #524F7E;
+
+  --color-lavender-50: #FBF9FE;
+  --color-lavender-100: #F4EFFC;
+  --color-lavender-200: #EAE2F8;
+  --color-lavender-300: #DDD0F4;
+  --color-lavender-border: #EBE5F5;
+
+  --color-prepnx-primary: #9333EA;
+  --color-prepnx-primary-hover: #7E22CE;
+  --color-prepnx-secondary: #A855F7;
+  --color-prepnx-dark: #7E22CE;
+  --color-prepnx-lavender: #F3E8FF;
+  --color-prepnx-light-lavender: #FAF9FF;
+  --color-prepnx-bg: #FAF9FF;
+  --color-prepnx-card: #FFFFFF;
+  --color-prepnx-heading: #17133A;
+  --color-prepnx-body: #68647D;
+  --color-prepnx-text-main: #17133A;
+  --color-prepnx-text-muted: #68647D;
+  --color-prepnx-border: #E9DDF8;
+  --color-prepnx-success: #10B981;
+  --color-prepnx-blue: #DBEAFE;
+  --color-prepnx-rose: #FCE7F3;
+
   --font-display: var(--font-manrope), sans-serif;
   --font-sans: var(--font-inter), sans-serif;
   --font-mono: var(--font-jetbrains), monospace;
@@ -109,4 +149,63 @@ h1, h2, h3, h4, h5, h6 {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(43, 51, 62, 0.8);
+}
+
+/* ========================================================================= */
+/* PREPNX STUDENT LIGHT THEME ENFORCEMENT                                    */
+/* Eliminates any dark mode bleed-through, dark grey cards, or unreadable navy */
+/* ========================================================================= */
+.prepnx-student-theme {
+  --background: #FAF9FF;
+  --foreground: #17133A;
+  background-color: #FAF9FF !important;
+  color: #17133A !important;
+}
+
+/* Ensure cards inside student experience remain clean white with subtle lavender border */
+.prepnx-student-theme .card,
+.prepnx-student-theme [class*="rounded-"][class*="border"],
+.prepnx-student-theme [class*="bg-white"] {
+  background-color: #FFFFFF;
+}
+
+/* Neutralize any dark-variant overrides that bleed through from system or shared components */
+.dark .prepnx-student-theme,
+.prepnx-student-theme.dark,
+.prepnx-student-theme [class*="dark:bg-neutral-"],
+.prepnx-student-theme [class*="dark:bg-primary-950"],
+.prepnx-student-theme [class*="dark:bg-card"] {
+  background-color: #FFFFFF;
+}
+
+.dark .prepnx-student-theme [class*="dark:border-neutral-"],
+.prepnx-student-theme [class*="dark:border-neutral-"] {
+  border-color: #E9DDF8;
+}
+
+.dark .prepnx-student-theme [class*="dark:text-white"] {
+  color: #17133A;
+}
+
+.dark .prepnx-student-theme [class*="dark:text-neutral-"] {
+  color: #68647D;
+}
+
+/* Ensure strong contrast on buttons and interactive elements */
+.prepnx-student-theme button.bg-primary-500,
+.prepnx-student-theme .bg-primary-500,
+.prepnx-student-theme button[class*="bg-[#9333EA]"],
+.prepnx-student-theme [class*="bg-[#9333EA]"] {
+  color: #FFFFFF !important;
+}
+
+.prepnx-student-theme button.bg-primary-500:hover,
+.prepnx-student-theme button[class*="hover:bg-[#7E22CE]"]:hover {
+  color: #FFFFFF !important;
+}
+
+/* Ensure text selection contrast */
+::selection {
+  background-color: #F3E8FF;
+  color: #7E22CE;
 }

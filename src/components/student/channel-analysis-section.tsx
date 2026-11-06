@@ -10,60 +10,61 @@ import { SubscribedSubjectProgress } from '@/types';
 
 interface ChannelAnalysisSectionProps {
   subjects: SubscribedSubjectProgress[];
+  onSelectSubject?: (item: SubscribedSubjectProgress) => void;
 }
 
-export function ChannelAnalysisSection({ subjects }: ChannelAnalysisSectionProps) {
+export function ChannelAnalysisSection({ subjects, onSelectSubject }: ChannelAnalysisSectionProps) {
   if (!subjects || subjects.length === 0) {
     return null;
   }
 
   return (
-    <section id="channel-analysis" className="w-full space-y-4">
-      <div className="flex items-center justify-between">
+    <section id="channel-analysis" className="w-full space-y-4 font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 text-xs font-bold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-[#9333EA] text-xs font-bold uppercase tracking-wider mb-1">
             <BarChart3 className="w-4 h-4" />
             <span>Academic Performance</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-neutral-950 dark:text-white font-display">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#17133A] font-display">
             Channel Analysis
           </h2>
-          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs sm:text-sm text-[#68647D]">
             Subject-wise learning completion across your subscribed channels.
           </p>
         </div>
 
-        <Badge variant="outline" className="text-xs font-semibold">
+        <Badge variant="outline" className="text-xs font-semibold border-[#E9DDF8] bg-[#F3E8FF] text-[#9333EA] self-start sm:self-auto">
           {subjects.length} {subjects.length === 1 ? 'Subscribed Subject' : 'Subscribed Subjects'}
         </Badge>
       </div>
 
-      <Card className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm rounded-3xl overflow-hidden">
+      <div className="border border-[#E9DDF8] bg-white shadow-xs rounded-3xl overflow-hidden">
         {/* Table Header */}
-        <div className="grid grid-cols-12 px-6 py-3.5 bg-neutral-50 dark:bg-neutral-950/60 border-b border-neutral-200/80 dark:border-neutral-800/80 text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+        <div className="grid grid-cols-12 px-6 py-3.5 bg-[#F3E8FF]/60 border-b border-[#E9DDF8] text-xs font-bold uppercase tracking-wider text-[#68647D]">
           <div className="col-span-4 sm:col-span-3">Subject / Channel</div>
           <div className="col-span-6 sm:col-span-7 px-2">Progress</div>
           <div className="col-span-2 text-right">View</div>
         </div>
 
-        <CardContent className="p-0 divide-y divide-neutral-100 dark:divide-neutral-800/70">
+        <div className="divide-y divide-[#E9DDF8]">
           {subjects.map((item, idx) => {
             return (
               <div
                 key={`${item.channelId}-${item.subjectName}-${idx}`}
-                className="grid grid-cols-12 items-center px-6 py-4.5 hover:bg-neutral-50/70 dark:hover:bg-neutral-950/40 transition-colors gap-2"
+                className="grid grid-cols-12 items-center px-6 py-4.5 hover:bg-[#FAF9FF] transition-colors gap-2"
               >
                 {/* Subject & Channel Info */}
                 <div className="col-span-4 sm:col-span-3 min-w-0 pr-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8] flex items-center justify-center shrink-0">
                       <BookOpen className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white block truncate">
+                      <span className="font-extrabold text-sm sm:text-base text-[#17133A] block truncate">
                         {item.subjectName}
                       </span>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 block truncate">
+                      <span className="text-[11px] text-[#68647D] block truncate">
                         {item.channelName}
                       </span>
                     </div>
@@ -73,28 +74,40 @@ export function ChannelAnalysisSection({ subjects }: ChannelAnalysisSectionProps
                 {/* Progress Bar & Percentage: e.g. ███████░░░ 70% */}
                 <div className="col-span-6 sm:col-span-7 px-2 space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-neutral-600 dark:text-neutral-300 font-semibold">
+                    <span className="font-mono text-[#68647D] font-semibold">
                       {item.completedItems} / {item.totalItems} completed
                     </span>
-                    <span className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                    <span className="font-extrabold text-sm text-[#9333EA]">
                       {item.percentage}%
                     </span>
                   </div>
-                  <div className="w-full h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden p-0.5 border border-neutral-200/50 dark:border-neutral-700/50">
+                  <div className="w-full h-3 bg-[#F3E8FF] rounded-full overflow-hidden p-0.5 border border-[#E9DDF8]">
                     <div
-                      className="h-full bg-gradient-to-r from-primary-500 to-emerald-500 rounded-full transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-[#A855F7] to-[#9333EA] rounded-full transition-all duration-500"
                       style={{ width: `${Math.max(item.percentage, item.totalItems > 0 ? 3 : 0)}%` }}
                     />
                   </div>
                 </div>
 
-                {/* View Action */}
-                <div className="col-span-2 text-right">
+                {/* View / Analytics Action */}
+                <div className="col-span-2 text-right flex items-center justify-end gap-1.5">
+                  {onSelectSubject && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSelectSubject(item)}
+                      className="rounded-xl px-2.5 py-1.5 text-xs font-bold border-[#E9DDF8] hover:border-[#9333EA] hover:bg-[#F3E8FF] text-[#9333EA] cursor-pointer"
+                      title="View detailed breakdown"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   <Link href={`/channels/${item.channelId}`}>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-xl px-4 py-1.5 text-xs font-bold hover:border-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+                      className="rounded-xl px-3 py-1.5 text-xs font-bold border-[#E9DDF8] hover:border-[#9333EA] hover:bg-[#F3E8FF] text-[#9333EA]"
                     >
                       View
                       <ExternalLink className="w-3.5 h-3.5 ml-1" />
@@ -104,8 +117,8 @@ export function ChannelAnalysisSection({ subjects }: ChannelAnalysisSectionProps
               </div>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </section>
   );
 }

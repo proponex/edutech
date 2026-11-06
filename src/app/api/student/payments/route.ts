@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireStudent } from '@/lib/student-auth';
 import { PaymentService } from '@/lib/payment-service';
+import { StudentService } from '@/lib/student-service';
 
 export async function GET() {
   const auth = await requireStudent();
@@ -9,10 +10,15 @@ export async function GET() {
   }
 
   try {
-    const history = await PaymentService.getStudentPaymentHistory(auth.user.id);
+    const [history, activeSubs] = await Promise.all([
+      PaymentService.getStudentPaymentHistory(auth.user.id),
+      StudentService.getStudentActiveSubscriptions(auth.user.id),
+    ]);
+
     return NextResponse.json({
       success: true,
       payments: history,
+      subscriptions: activeSubs || [],
     });
   } catch (err: any) {
     console.error('[API student payments Error]:', err);

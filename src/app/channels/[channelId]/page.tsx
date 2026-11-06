@@ -73,6 +73,17 @@ function ChannelDetailContent() {
 
   // Subscription State
   const [subscription, setSubscription] = useState<ChannelSubscription | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    hasActiveSubscription: boolean;
+    isExpired: boolean;
+    subscription: ChannelSubscription | null;
+    subscriptions?: ChannelSubscription[];
+    activeSubjectNames?: string[];
+    hasChannelWideSubscription?: boolean;
+    expiresAt?: string;
+    startsAt?: string;
+    daysRemaining?: number;
+  } | null>(null);
 
   // Video Playing States
   const [isPlayingDemo, setIsPlayingDemo] = useState(false);
@@ -184,8 +195,9 @@ function ChannelDetailContent() {
         }
 
         if (user) {
-          const sub = await StudentService.getSubscription(user.id, channelId);
-          setSubscription(sub);
+          const subStatus = await StudentService.getSubscriptionStatus(user.id, channelId);
+          setSubscriptionStatus(subStatus);
+          setSubscription(subStatus.hasActiveSubscription ? subStatus.subscription : null);
 
           // Load progress & messages
           const prog = await StudentService.getStudentProgress(user.id, channelId);
@@ -225,13 +237,24 @@ function ChannelDetailContent() {
 
   // Handle Video Click (Demo vs Subscribed vs Locked)
   const handleContentVideoClick = async (video: VideoContentItem) => {
-    if (video.is_demo || subscription) {
+    const parentUnit = units.find((u) => u.id === video.unit_id);
+    const unitSubject = parentUnit?.subject_name;
+    const isUnlocked = Boolean(
+      video.is_demo ||
+      subscriptionStatus?.hasChannelWideSubscription ||
+      (unitSubject && subscriptionStatus?.activeSubjectNames?.includes(unitSubject))
+    );
+
+    if (isUnlocked) {
       router.push(`/watch/video/${video.id}?channelId=${channelId}`);
     } else {
-      // Locked Paid Content -> Show Subscribe / Payment Info popup
       if (!currentUser) {
         openAuthModal('login', 'Please sign in or create an account to view this lesson.');
         return;
+      }
+      if (unitSubject) {
+        setSelectedScope('subject');
+        setSelectedSubject(unitSubject);
       }
       setIsPackageModalOpen(true);
     }
@@ -240,9 +263,17 @@ function ChannelDetailContent() {
   // Handle Quiz / Homework / Live Click
   const handleInteractiveContentClick = async (
     type: 'quiz' | 'homework',
-    contentId: string
+    contentId: string,
+    unitId?: string
   ) => {
-    if (subscription && currentUser) {
+    const parentUnit = units.find((u) => u.id === unitId);
+    const unitSubject = parentUnit?.subject_name;
+    const isUnlocked = Boolean(
+      subscriptionStatus?.hasChannelWideSubscription ||
+      (unitSubject && subscriptionStatus?.activeSubjectNames?.includes(unitSubject))
+    );
+
+    if (isUnlocked && currentUser) {
       // If quiz, redirect to the actual quiz UI player
       if (type === 'quiz') {
         router.push(`/student/quiz/${contentId}`);
@@ -307,9 +338,10 @@ function ChannelDetailContent() {
 
       // If free item, enrollment was granted directly on backend
       if (orderData.isFree) {
-        setSubscriptionSuccess('Enrollment successful! Content unlocked.');
-        const sub = await StudentService.getSubscription(currentUser.id, channelId);
-        setSubscription(sub);
+        setSubscriptionSuccess('Enrollment successful! 28-day channel access unlocked.');
+        const subStatus = await StudentService.getSubscriptionStatus(currentUser.id, channelId);
+        setSubscriptionStatus(subStatus);
+        setSubscription(subStatus.hasActiveSubscription ? subStatus.subscription : null);
         setSubscriberCount((prev) => prev + 1);
         const prog = await StudentService.getStudentProgress(currentUser.id, channelId);
         setStudentProgress(prog);
@@ -353,9 +385,13 @@ function ChannelDetailContent() {
               throw new Error(verifyData.error || 'Payment verification failed.');
             }
 
-            setSubscriptionSuccess('Payment verified successfully! Course unlocked.');
-            const sub = await StudentService.getSubscription(currentUser.id, channelId);
-            setSubscription(sub);
+            const expiryFormatted = verifyData?.expiresAt
+              ? new Date(verifyData.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '28 days';
+            setSubscriptionSuccess(`Payment Successful! Channel access active until ${expiryFormatted}.`);
+            const subStatus = await StudentService.getSubscriptionStatus(currentUser.id, channelId);
+            setSubscriptionStatus(subStatus);
+            setSubscription(subStatus.hasActiveSubscription ? subStatus.subscription : null);
             setSubscriberCount((prev) => prev + 1);
             const prog = await StudentService.getStudentProgress(currentUser.id, channelId);
             setStudentProgress(prog);
@@ -439,7 +475,8 @@ function ChannelDetailContent() {
     );
   }
 
-  const isSubscribed = Boolean(subscription);
+  const isSubscribed = Boolean(subscriptionStatus?.hasActiveSubscription || (subscription && subscription.status === 'active' && (!subscription.expires_at || new Date(subscription.expires_at) > new Date())));
+  const isSubscriptionExpired = Boolean(subscriptionStatus?.isExpired || (subscription && subscription.expires_at && new Date(subscription.expires_at) <= new Date()));
   const displayedDemo = activePlayableVideo || demoVideo;
 
   // Multiple subjects check (Requirement 4: Subject filter only if multiple subjects exist)
@@ -551,12 +588,47 @@ function ChannelDetailContent() {
               </div>
             </div>
 
-            {/* Subscribe / Subscribed Status Button */}
+            {/* Subscribe / Subscribed / Expired Status Button */}
             <div className="shrink-0">
               {isSubscribed ? (
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-bold shadow-sm">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Subscribed ({subscription?.package_type?.replace('_', ' ')})</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-bold shadow-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Active (28-Day Access){subscriptionStatus?.expiresAt || subscription?.expires_at ? ` • Expires ${new Date((subscriptionStatus?.expiresAt || subscription?.expires_at)!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsPackageModalOpen(true)}
+                    className="text-xs font-bold"
+                  >
+                    Renew (+28 Days)
+                  </Button>
+                </div>
+              ) : isSubscriptionExpired ? (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-bold">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      Subscription Expired{subscriptionStatus?.expiresAt || subscription?.expires_at ? ` on ${new Date((subscriptionStatus?.expiresAt || subscription?.expires_at)!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}
+                    </span>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => {
+                      if (!currentUser) {
+                        openAuthModal('login', 'Please sign in to renew your subscription.');
+                        return;
+                      }
+                      setIsPackageModalOpen(true);
+                    }}
+                    className="w-full sm:w-auto font-extrabold px-6 shadow-md shadow-primary-500/20 cursor-pointer"
+                  >
+                    Renew Subscription
+                  </Button>
                 </div>
               ) : (
                 <Button
@@ -571,7 +643,7 @@ function ChannelDetailContent() {
                   }}
                   className="w-full sm:w-auto font-extrabold px-6 shadow-md shadow-primary-500/20 cursor-pointer"
                 >
-                  Subscribe
+                  Subscribe (28 Days)
                 </Button>
               )}
             </div>
@@ -781,6 +853,29 @@ function ChannelDetailContent() {
           </div>
         )}
 
+        {/* Expired Subscription Notice Banner */}
+        {isSubscriptionExpired && (
+          <div className="p-5 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-amber-950 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold">Subscription Expired</h3>
+                <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                  Your 28-day access to this channel expired{subscriptionStatus?.expiresAt ? ` on ${new Date(subscriptionStatus.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}. Paid lectures, quizzes, and homework are locked until renewed.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsPackageModalOpen(true)}
+              className="font-bold shrink-0 self-start sm:self-center shadow-sm"
+            >
+              Renew Subscription
+            </Button>
+          </div>
+        )}
+
         {/* ======================================================================= */}
         {/* REQUIREMENT 4: CONTENT LISTING WITH 1.5 UNITS INITIAL EXPANDABLE PREVIEW */}
         {/* ======================================================================= */}
@@ -807,9 +902,13 @@ function ChannelDetailContent() {
               >
                 {filteredUnits.map((unit, uIdx) => {
                   const unitVideos = videos.filter((v) => v.unit_id === unit.id);
-
                   const unitQuizzes = quizzes.filter((q) => q.unit_id === unit.id);
                   const unitHomework = homework.filter((h) => h.unit_id === unit.id);
+
+                  const isUnitUnlocked = Boolean(
+                    subscriptionStatus?.hasChannelWideSubscription ||
+                    (unit.subject_name && subscriptionStatus?.activeSubjectNames?.includes(unit.subject_name))
+                  );
 
                   return (
                     <Card
@@ -861,7 +960,7 @@ function ChannelDetailContent() {
                       <CardContent className="p-4 sm:p-6 space-y-2.5">
                         {/* Videos */}
                         {unitVideos.map((video) => {
-                          const canPlay = video.is_demo || isSubscribed;
+                          const canPlay = video.is_demo || isUnitUnlocked;
                           const isCompleted = studentProgress.progressMap[video.id] === 'completed';
 
                           return (
@@ -905,7 +1004,7 @@ function ChannelDetailContent() {
                                     <Play className="w-3 h-3 fill-current" />
                                     ▶ Free Demo
                                   </Badge>
-                                ) : isSubscribed ? (
+                                ) : isUnitUnlocked ? (
                                   isCompleted ? (
                                     <Badge variant="success" className="text-xs flex items-center gap-1">
                                       <CheckCircle2 className="w-3 h-3" />
@@ -936,7 +1035,7 @@ function ChannelDetailContent() {
                           return (
                             <div
                               key={quiz.id}
-                              onClick={() => handleInteractiveContentClick('quiz', quiz.id)}
+                              onClick={() => handleInteractiveContentClick('quiz', quiz.id, unit.id)}
                               className="flex items-center justify-between p-3.5 rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/20 dark:bg-amber-950/10 cursor-pointer"
                             >
                               <div className="flex items-center gap-3">
@@ -958,7 +1057,7 @@ function ChannelDetailContent() {
                                   </span>
                                 </div>
                               </div>
-                              {isSubscribed ? (
+                              {isUnitUnlocked ? (
                                 isCompleted ? (
                                   <Badge variant="success" className="text-xs">
                                     ✓ Submitted
@@ -985,7 +1084,7 @@ function ChannelDetailContent() {
                           return (
                             <div
                               key={hw.id}
-                              onClick={() => handleInteractiveContentClick('homework', hw.id)}
+                              onClick={() => handleInteractiveContentClick('homework', hw.id, unit.id)}
                               className="flex items-center justify-between p-3.5 rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/20 dark:bg-blue-950/10 cursor-pointer"
                             >
                               <div className="flex items-center gap-3">
@@ -1009,7 +1108,7 @@ function ChannelDetailContent() {
                                   )}
                                 </div>
                               </div>
-                              {isSubscribed ? (
+                              {isUnitUnlocked ? (
                                 isCompleted ? (
                                   <Badge variant="success" className="text-xs">
                                     ✓ Completed
@@ -1236,11 +1335,14 @@ function ChannelDetailContent() {
                 Select your preferred learning plan. Choose full channel access, class-specific curriculum, or targeted subject mastery.
               </p>
 
-              {/* Duration Selector Tabs */}
+              {/* Duration Selector Tabs with explicit 28-day duration */}
               <div>
-                <label className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                  Choose Duration
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider block">
+                    Access Duration: <span className="text-primary-600 dark:text-primary-400 font-extrabold">{selectedDuration === '1_month' || (selectedDuration as string) === '28_days' ? '28 Days' : selectedDuration === '6_months' ? '6 Months' : '12 Months'}</span>
+                  </label>
+                  <span className="text-[10px] text-neutral-400 font-medium">Standard 28-day cycle</span>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   {(['1_month', '6_months', '12_months'] as SubscriptionDuration[]).map((dur) => (
                     <button
@@ -1253,7 +1355,7 @@ function ChannelDetailContent() {
                           : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300'
                       }`}
                     >
-                      {dur === '1_month' ? '1 Month' : dur === '6_months' ? '6 Months' : '12 Months'}
+                      {dur === '1_month' ? '28 Days' : dur === '6_months' ? '6 Months' : '12 Months'}
                     </button>
                   ))}
                 </div>
@@ -1426,10 +1528,11 @@ function ChannelDetailContent() {
                   variant="primary"
                   size="sm"
                   onClick={handleConfirmPackageSelection}
+                  disabled={processingSubscribe}
                   isLoading={processingSubscribe}
                   className="font-bold px-5"
                 >
-                  Proceed to Payment
+                  {isSubscriptionExpired ? 'Renew Now' : 'Pay Now'} (₹{(currentPlanPricePaise / 100).toLocaleString('en-IN')})
                 </Button>
               </div>
             </div>

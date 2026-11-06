@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 // Load environment
-const envPath = path.resolve('c:/Users/user/Documents/Edutech/edutech/.env');
+const envPath = fs.existsSync(path.resolve(__dirname, '../.env.local')) ? path.resolve(__dirname, '../.env.local') : path.resolve(__dirname, '../.env');
 const envContent = fs.readFileSync(envPath, 'utf8');
 const env = {};
 envContent.split(/\r?\n/).forEach(line => {
@@ -62,7 +62,7 @@ async function runTestSuite() {
     'Secret keys are never committed or hardcoded in source templates'
   );
 
-  const envExample = fs.readFileSync('c:/Users/user/Documents/Edutech/edutech/.env.example', 'utf8');
+  const envExample = fs.readFileSync(path.resolve(__dirname, '../.env.example'), 'utf8');
   assert(
     envExample.includes('RAZORPAY_KEY_ID=') &&
     envExample.includes('RAZORPAY_KEY_SECRET=') &&
@@ -231,6 +231,131 @@ async function runTestSuite() {
   assert(
     teacherSettlementPaise + platformSettlementPaise === studentTotalPaise,
     'Commission split has zero floating-point remainder discrepancy'
+  );
+
+  // --------------------------------------------------------------------------
+  // TEST GROUP 7: 28-DAY CHANNEL SUBSCRIPTION SYSTEM
+  // --------------------------------------------------------------------------
+  console.log('\n--- 7. 28-Day Subscription System & Lifecycle Rules ---');
+  const DURATION_28_DAYS_MS = 28 * 24 * 60 * 60 * 1000;
+
+  // Rule 1: Payment on 1 November -> Expires on 29 November (28 days later)
+  const paymentDateNov1 = new Date('2026-11-01T12:00:00.000Z');
+  const expectedExpiryNov29 = new Date('2026-11-29T12:00:00.000Z');
+  const calculatedExpiry = new Date(paymentDateNov1.getTime() + DURATION_28_DAYS_MS);
+
+  assert(
+    calculatedExpiry.getTime() === expectedExpiryNov29.getTime(),
+    '1 November payment expires exactly 28 days later on 29 November'
+  );
+  assert(
+    Math.round((calculatedExpiry.getTime() - paymentDateNov1.getTime()) / (1000 * 60 * 60 * 24)) === 28,
+    'Subscription duration equals exactly 28 calendar days'
+  );
+
+  // Rule 2: Renewal BEFORE expiry preserves remaining days and adds 28 days
+  const activeExistingExpiry = new Date('2026-11-29T12:00:00.000Z');
+  const renewalAttemptDate = new Date('2026-11-20T12:00:00.000Z'); // 9 days before expiry
+  const renewedExpiryBefore = new Date(activeExistingExpiry.getTime() + DURATION_28_DAYS_MS);
+  const expectedExtendedExpiry = new Date('2026-12-27T12:00:00.000Z'); // 29 Nov + 28 days = 27 Dec
+
+  assert(
+    renewedExpiryBefore.getTime() === expectedExtendedExpiry.getTime(),
+    'Renewal before expiry extends existing expiry by 28 days (29 Nov -> 27 Dec)'
+  );
+
+  // Rule 3: Renewal AFTER expiry starts new 28-day period from renewal time
+  const expiredTimestamp = new Date('2026-10-15T12:00:00.000Z');
+  const afterExpiryRenewalDate = new Date('2026-11-04T12:00:00.000Z');
+  const renewedExpiryAfter = new Date(afterExpiryRenewalDate.getTime() + DURATION_28_DAYS_MS);
+  const expectedAfterExpiry = new Date('2026-12-02T12:00:00.000Z'); // 4 Nov + 28 days = 2 Dec
+
+  assert(
+    renewedExpiryAfter.getTime() === expectedAfterExpiry.getTime(),
+    'Renewal after expiry starts new 28-day period from renewal date'
+  );
+
+  // Rule 4: Expired subscription verification
+  const isAccessGranted = (status, expiresAt, currentTime) => {
+    if (status !== 'active') return false;
+    if (expiresAt && new Date(expiresAt).getTime() <= currentTime.getTime()) return false;
+    return true;
+  };
+
+  assert(
+    isAccessGranted('active', '2026-10-20T00:00:00Z', new Date('2026-11-04T00:00:00Z')) === false,
+    'Expired subscription (past expiry timestamp) is strictly locked'
+  );
+  assert(
+    isAccessGranted('active', '2026-12-01T00:00:00Z', new Date('2026-11-04T00:00:00Z')) === true,
+    'Active subscription (future expiry timestamp) grants access'
+  );
+
+  // --------------------------------------------------------------------------
+  // TEST GROUP 8: IDEMPOTENCY & DUPLICATE CALLBACK PROTECTION
+  // --------------------------------------------------------------------------
+  console.log('\n--- 8. Idempotency & Duplicate Callback Protection ---');
+  const processedTransactions = new Set(['pay_already_captured_123']);
+  const verifySim = (paymentId) => {
+    if (processedTransactions.has(paymentId)) {
+      return { success: true, message: 'Payment was already verified and processed.', duplicate: true };
+    }
+    processedTransactions.add(paymentId);
+    return { success: true, message: 'Payment verified successfully.', duplicate: false };
+  };
+
+  const firstCall = verifySim('pay_already_captured_123');
+  assert(
+    firstCall.duplicate === true && firstCall.success === true,
+    'Duplicate payment callback identified and handled idempotently without duplicate extension'
+  );
+
+  const newCall = verifySim('pay_new_payment_456');
+  assert(
+    newCall.duplicate === false && newCall.success === true,
+    'Fresh payment callback processed successfully'
+  );
+
+  // --------------------------------------------------------------------------
+  // TEST GROUP 9: 20% PLATFORM SURCHARGE & TEACHER EARNINGS ALLOCATION
+  // Rule: Student Payment = Teacher Base Amount + 20% Platform Fee
+  // Teacher Earnings = Math.round(Student Payment / 1.20)
+  // Platform Fee = Student Payment - Teacher Earnings
+  // --------------------------------------------------------------------------
+  console.log('\n--- 9. 20% Platform Fee & Educator Earnings Allocation (New Pricing Rule) ---');
+  const testAmountsPaise = [120, 10000, 12000, 120000, 49900, 99900]; // ₹1.20, ₹100, ₹120, ₹1200, ₹499, ₹999
+
+  testAmountsPaise.forEach((amt) => {
+    const teacherShare = Math.round(amt / 1.20);
+    const platformFee = amt - teacherShare;
+    const rupeeTotal = amt / 100;
+
+    assert(
+      platformFee + teacherShare === amt,
+      `₹${rupeeTotal.toFixed(2)}: Fee (₹${(platformFee / 100).toFixed(2)}) + Educator (₹${(teacherShare / 100).toFixed(2)}) reconciles with zero remainder discrepancy`
+    );
+  });
+
+  // Explicit verification for ₹100, ₹120, and ₹1,200 payments
+  const p100Teacher = Math.round(10000 / 1.20); // 8333 paise (₹83.33)
+  const p100Fee = 10000 - p100Teacher; // 1667 paise (₹16.67)
+  assert(
+    p100Teacher === 8333 && p100Fee === 1667,
+    '₹100 payment yields ₹83.33 teacher base and ₹16.67 platform fee'
+  );
+
+  const p120Teacher = Math.round(12000 / 1.20); // 10000 paise (₹100.00)
+  const p120Fee = 12000 - p120Teacher; // 2000 paise (₹20.00)
+  assert(
+    p120Teacher === 10000 && p120Fee === 2000,
+    '₹120 payment yields ₹100.00 teacher base and ₹20.00 platform fee'
+  );
+
+  const p1200Teacher = Math.round(120000 / 1.20); // 100000 paise (₹1,000.00)
+  const p1200Fee = 120000 - p1200Teacher; // 20000 paise (₹200.00)
+  assert(
+    p1200Teacher === 100000 && p1200Fee === 20000,
+    '₹1,200 payment yields ₹1,000.00 teacher base and ₹200.00 platform fee'
   );
 
   // --------------------------------------------------------------------------

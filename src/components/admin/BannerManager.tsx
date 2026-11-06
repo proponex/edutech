@@ -38,6 +38,8 @@ export function BannerManager() {
   // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [formButtonText, setFormButtonText] = useState('Explore Channels');
+  const [formButtonLink, setFormButtonLink] = useState('/student?tab=channels');
   const [formOrder, setFormOrder] = useState<number>(1);
   const [formIsActive, setFormIsActive] = useState<boolean>(true);
   const [formFile, setFormFile] = useState<File | null>(null);
@@ -105,6 +107,8 @@ export function BannerManager() {
   const resetForm = () => {
     setFormTitle('');
     setFormDescription('');
+    setFormButtonText('Explore Channels');
+    setFormButtonLink('/student?tab=channels');
     setFormOrder(banners.length + 1);
     setFormIsActive(true);
     setFormFile(null);
@@ -159,15 +163,25 @@ export function BannerManager() {
 
       const imageUrl = publicUrlData.publicUrl;
 
-      // 2. Insert record into banners table
-      const { error: insertError } = await supabase.from('banners').insert({
+      // 2. Insert record into banners table (with button CTA support)
+      const insertPayload: any = {
         title: formTitle,
         description: formDescription || null,
         image_url: imageUrl,
         storage_path: filePath,
         display_order: Number(formOrder),
         is_active: formIsActive,
-      });
+        button_text: formButtonText || 'Explore Channels',
+        button_link: formButtonLink || '/student?tab=channels',
+      };
+
+      let { error: insertError } = await supabase.from('banners').insert(insertPayload);
+      if (insertError && (insertError.message.includes('button_text') || insertError.message.includes('button_link'))) {
+        delete insertPayload.button_text;
+        delete insertPayload.button_link;
+        const fallbackRes = await supabase.from('banners').insert(insertPayload);
+        insertError = fallbackRes.error;
+      }
 
       if (insertError) {
         throw new Error(`Database record creation failed: ${insertError.message}`);
@@ -189,6 +203,8 @@ export function BannerManager() {
     setSelectedBanner(banner);
     setFormTitle(banner.title);
     setFormDescription(banner.description || '');
+    setFormButtonText(banner.button_text || 'Explore Channels');
+    setFormButtonLink(banner.button_link || '/student?tab=channels');
     setFormOrder(banner.display_order);
     setFormIsActive(banner.is_active);
     setFormPreview(banner.image_url);
@@ -233,19 +249,33 @@ export function BannerManager() {
         finalStoragePath = filePath;
       }
 
-      // Update record
-      const { error: updateError } = await supabase
+      // Update record with button support and fallback
+      const updatePayload: any = {
+        title: formTitle,
+        description: formDescription || null,
+        image_url: finalImageUrl,
+        storage_path: finalStoragePath,
+        display_order: Number(formOrder),
+        is_active: formIsActive,
+        button_text: formButtonText || 'Explore Channels',
+        button_link: formButtonLink || '/student?tab=channels',
+        updated_at: new Date().toISOString(),
+      };
+
+      let { error: updateError } = await supabase
         .from('banners')
-        .update({
-          title: formTitle,
-          description: formDescription || null,
-          image_url: finalImageUrl,
-          storage_path: finalStoragePath,
-          display_order: Number(formOrder),
-          is_active: formIsActive,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', selectedBanner.id);
+
+      if (updateError && (updateError.message.includes('button_text') || updateError.message.includes('button_link'))) {
+        delete updatePayload.button_text;
+        delete updatePayload.button_link;
+        const fallbackRes = await supabase
+          .from('banners')
+          .update(updatePayload)
+          .eq('id', selectedBanner.id);
+        updateError = fallbackRes.error;
+      }
 
       if (updateError) {
         throw new Error(`Banner update failed: ${updateError.message}`);
@@ -590,6 +620,52 @@ export function BannerManager() {
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Button CTA Label"
+              value={formButtonText}
+              onChange={(e) => setFormButtonText(e.target.value)}
+              placeholder="e.g. Explore Channels"
+            />
+            <Input
+              label="Button Destination URL / Route"
+              value={formButtonLink}
+              onChange={(e) => setFormButtonLink(e.target.value)}
+              placeholder="e.g. /student?tab=channels"
+            />
+          </div>
+
+          {/* Live Interactive Preview */}
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-primary-500" />
+              Live Banner Preview (Student View)
+            </span>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-purple-50 via-white to-purple-50/50 border border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wide bg-purple-100 px-2 py-0.5 rounded-full inline-block">
+                  Board &amp; Competitive Preparation
+                </span>
+                <h4 className="text-base font-extrabold text-neutral-900 truncate">
+                  {formTitle || 'Learn • Practice • Achieve'}
+                </h4>
+                <p className="text-xs text-neutral-600 line-clamp-2">
+                  {formDescription || 'Live Classes, Recorded Lessons, Tests & More for School and Competitive Exams.'}
+                </p>
+                <div className="pt-1">
+                  <span className="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-purple-600 shadow-xs">
+                    {formButtonText || 'Explore Channels'} →
+                  </span>
+                </div>
+              </div>
+              {formPreview && (
+                <div className="relative w-24 h-20 rounded-xl overflow-hidden shrink-0 border border-purple-200 bg-neutral-900">
+                  <NextImage src={formPreview} alt="Preview" fill className="object-cover" unoptimized />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Display Order"
@@ -696,6 +772,52 @@ export function BannerManager() {
               onChange={(e) => setFormDescription(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl text-sm border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Button CTA Label"
+              value={formButtonText}
+              onChange={(e) => setFormButtonText(e.target.value)}
+              placeholder="e.g. Explore Channels"
+            />
+            <Input
+              label="Button Destination URL / Route"
+              value={formButtonLink}
+              onChange={(e) => setFormButtonLink(e.target.value)}
+              placeholder="e.g. /student?tab=channels"
+            />
+          </div>
+
+          {/* Live Interactive Preview */}
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-primary-500" />
+              Live Banner Preview (Student View)
+            </span>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-purple-50 via-white to-purple-50/50 border border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wide bg-purple-100 px-2 py-0.5 rounded-full inline-block">
+                  Board &amp; Competitive Preparation
+                </span>
+                <h4 className="text-base font-extrabold text-neutral-900 truncate">
+                  {formTitle || 'Learn • Practice • Achieve'}
+                </h4>
+                <p className="text-xs text-neutral-600 line-clamp-2">
+                  {formDescription || 'Live Classes, Recorded Lessons, Tests & More for School and Competitive Exams.'}
+                </p>
+                <div className="pt-1">
+                  <span className="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-purple-600 shadow-xs">
+                    {formButtonText || 'Explore Channels'} →
+                  </span>
+                </div>
+              </div>
+              {formPreview && (
+                <div className="relative w-24 h-20 rounded-xl overflow-hidden shrink-0 border border-purple-200 bg-neutral-900">
+                  <NextImage src={formPreview} alt="Preview" fill className="object-cover" unoptimized />
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -36,6 +36,8 @@ export interface BannerItem {
   storage_path: string | null;
   display_order: number;
   is_active: boolean;
+  button_text?: string | null;
+  button_link?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -149,6 +151,7 @@ export interface ChannelItem {
   classes?: ClassItem[];
   boards?: BoardItem[];
   specializations?: string[];
+  subjects?: string[];
   languages?: string[];
   content_counts?: {
     videos: number;
@@ -286,6 +289,12 @@ export interface ChannelSubscription {
   class_id?: string | null;
   subject_name?: string | null;
   status: 'active' | 'pending' | 'expired' | 'cancelled';
+  starts_at?: string;
+  expires_at?: string;
+  duration?: string;
+  payment_id?: string | null;
+  order_id?: string | null;
+  unit_id?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -857,7 +866,7 @@ export interface ChildLearningAnalytics {
 // ==============================================================================
 
 export type MonetizationScope = 'channel' | 'subject' | 'chapter';
-export type SubscriptionDuration = '1_month' | '6_months' | '12_months';
+export type SubscriptionDuration = '28_days' | '1_month' | '6_months' | '12_months';
 
 export interface TeacherContentPricing {
   id: string;
@@ -974,6 +983,58 @@ export interface TeacherMonetizationOverview {
 }
 
 // ==============================================================================
+// ==============================================================================
+// TEACHER WITHDRAWAL REQUEST TYPES
+// ==============================================================================
+
+export type WithdrawalStatus = 'pending' | 'requested' | 'processing' | 'completed' | 'rejected';
+export type WithdrawalPaymentMethod = 'upi' | 'gpay' | 'gpay_number' | 'upi_id' | 'bank_transfer';
+
+export interface TeacherWithdrawalRequest {
+  id: string;
+  teacher_id: string;
+  amount_paise: number;
+  amount_rupees?: number;
+  requested_amount_paise?: number;
+  currency?: string;
+  payment_method: WithdrawalPaymentMethod;
+  payment_address?: string;
+  upi_id?: string | null;
+  gpay_number?: string | null;
+  qr_code_url?: string | null;
+  qr_image_url?: string | null;
+  notes?: string | null;
+  payment_notes?: string | null;
+  status: WithdrawalStatus;
+  admin_notes?: string | null;
+  rejection_reason?: string | null;
+  utr_reference?: string | null;
+  payout_reference?: string | null;
+  processed_by?: string | null;
+  requested_at: string;
+  processed_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // Joined fields for display
+  teacher?: {
+    name?: string;
+    email?: string;
+    phone?: string | null;
+    photo_url?: string | null;
+  };
+  channel?: {
+    name?: string;
+  };
+  teacher_name?: string;
+  teacher_email?: string;
+  teacher_phone?: string | null;
+  teacher_photo_url?: string | null;
+  channel_name?: string | null;
+  teacher_available_balance_rupees?: number;
+  available_earnings_paise?: number;
+}
+
 // LIVE STREAMING TYPES
 // ==============================================================================
 
@@ -1038,4 +1099,132 @@ export interface LiveChatMessage {
     name: string;
     photo_url: string | null;
   };
+}
+
+
+// ==============================================================================
+// REDESIGNED ADMIN DASHBOARD TYPES: INCOME, PAYMENT ANALYTICS, USERS
+// ==============================================================================
+
+export interface TeacherPayoutSettings {
+  id?: string;
+  teacher_id: string;
+  account_holder_name?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  ifsc_code?: string | null;
+  upi_id?: string | null;
+  account_type?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TeacherPayoutRecord {
+  id: string;
+  teacher_id: string;
+  teacher_name?: string;
+  amount_paise: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'reversed';
+  utr_reference: string;
+  payment_method: string;
+  admin_id?: string | null;
+  admin_name?: string | null;
+  notes?: string | null;
+  completed_at: string;
+  created_at: string;
+}
+
+export interface AdminTransactionItem {
+  id: string;
+  transactionId: string;
+  orderId: string;
+  razorpayPaymentId?: string | null;
+  razorpayOrderId?: string | null;
+  studentId: string;
+  studentName: string;
+  studentEmail?: string;
+  teacherId: string;
+  teacherName: string;
+  channelId?: string;
+  channelName: string;
+  totalAmountPaise: number;
+  platformFeePaise: number; // 20%
+  teacherEarningPaise: number; // 80%
+  currency: string;
+  paymentDate: string;
+  paymentStatus: 'captured' | 'failed' | 'authorized' | 'refunded';
+  teacherPayoutStatus: 'pending' | 'cleared' | 'paid_out';
+  method?: string | null;
+}
+
+export interface AdminTeacherPendingPayout {
+  teacherId: string;
+  teacherName: string;
+  teacherEmail: string;
+  teacherPhone?: string | null;
+  teacherPhotoUrl?: string | null;
+  channelId?: string;
+  channelName: string;
+  totalSuccessfulPaymentsCount: number;
+  totalTeacherEarningsPaise: number; // total 80% earned
+  alreadyPaidAmountPaise: number; // paid_out
+  remainingPendingAmountPaise: number; // pending/cleared balance
+  bankDetails: {
+    accountHolderName?: string | null;
+    bankName?: string | null;
+    accountNumber?: string | null;
+    ifscCode?: string | null;
+    upiId?: string | null;
+    accountType?: string | null;
+  };
+}
+
+export interface AdminIncomeOverview {
+  totalIncomePaise: number; // Card 1
+  totalPlatformIncomePaise: number; // Card 2 (20%)
+  pendingMoneyPaise: number; // Card 3 (Teacher pending payouts)
+  paidTeacherCostPaise: number; // Card 4 (Teacher paid payouts)
+  transactions: AdminTransactionItem[];
+  pendingPayments: AdminTeacherPendingPayout[];
+}
+
+export interface PaymentAnalyticsFilters {
+  dateRange: 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'all' | 'custom';
+  startDate?: string;
+  endDate?: string;
+  teacherId?: string;
+  studentId?: string;
+  channelId?: string;
+  paymentStatus?: 'all' | 'captured' | 'failed' | 'pending';
+  payoutStatus?: 'all' | 'pending' | 'completed';
+  paymentMethod?: 'all' | 'upi' | 'card' | 'netbanking' | 'wallet';
+}
+
+export interface PaymentAnalyticsReport {
+  summary: {
+    totalRevenuePaise: number;
+    platformIncomePaise: number;
+    teacherEarningsPaise: number;
+    completedPayoutsPaise: number;
+    pendingPayoutsPaise: number;
+    totalTransactionsCount: number;
+    successfulTransactionsCount: number;
+    failedTransactionsCount: number;
+    successRatePercent: number;
+    averageTransactionValuePaise: number;
+  };
+  charts: {
+    revenueOverTime: Array<{ date: string; revenuePaise: number; platformFeePaise: number; teacherSharePaise: number }>;
+    payoutStatusBreakdown: { pendingPaise: number; completedPaise: number };
+    paymentStatusBreakdown: { success: number; failed: number };
+    topTeachers: Array<{ teacherId: string; teacherName: string; revenuePaise: number; studentCount: number }>;
+    topChannels: Array<{ channelId: string; channelName: string; teacherName: string; revenuePaise: number; subscriberCount: number }>;
+  };
+}
+
+export interface AdminUsersStats {
+  totalStudents: number;
+  totalTeachers: number;
+  totalParents: number;
 }
