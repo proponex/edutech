@@ -38,8 +38,9 @@ export function BannerManager() {
   // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
-  const [formButtonText, setFormButtonText] = useState('Explore Channels');
-  const [formButtonLink, setFormButtonLink] = useState('/student?tab=channels');
+  const [formButtonText, setFormButtonText] = useState('Explore Platform');
+  const [formButtonLink, setFormButtonLink] = useState('#features');
+  const [formEnableCta, setFormEnableCta] = useState<boolean>(true);
   const [formOrder, setFormOrder] = useState<number>(1);
   const [formIsActive, setFormIsActive] = useState<boolean>(true);
   const [formFile, setFormFile] = useState<File | null>(null);
@@ -107,8 +108,9 @@ export function BannerManager() {
   const resetForm = () => {
     setFormTitle('');
     setFormDescription('');
-    setFormButtonText('Explore Channels');
-    setFormButtonLink('/student?tab=channels');
+    setFormButtonText('Explore Platform');
+    setFormButtonLink('#features');
+    setFormEnableCta(true);
     setFormOrder(banners.length + 1);
     setFormIsActive(true);
     setFormFile(null);
@@ -171,8 +173,8 @@ export function BannerManager() {
         storage_path: filePath,
         display_order: Number(formOrder),
         is_active: formIsActive,
-        button_text: formButtonText || 'Explore Channels',
-        button_link: formButtonLink || '/student?tab=channels',
+        button_text: formEnableCta ? (formButtonText || 'Explore Platform') : null,
+        button_link: formEnableCta ? (formButtonLink || '#features') : null,
       };
 
       let { error: insertError } = await supabase.from('banners').insert(insertPayload);
@@ -203,8 +205,9 @@ export function BannerManager() {
     setSelectedBanner(banner);
     setFormTitle(banner.title);
     setFormDescription(banner.description || '');
-    setFormButtonText(banner.button_text || 'Explore Channels');
-    setFormButtonLink(banner.button_link || '/student?tab=channels');
+    setFormButtonText(banner.button_text || 'Explore Platform');
+    setFormButtonLink(banner.button_link || '#features');
+    setFormEnableCta(Boolean(banner.button_text && banner.button_text.trim() !== ''));
     setFormOrder(banner.display_order);
     setFormIsActive(banner.is_active);
     setFormPreview(banner.image_url);
@@ -257,8 +260,8 @@ export function BannerManager() {
         storage_path: finalStoragePath,
         display_order: Number(formOrder),
         is_active: formIsActive,
-        button_text: formButtonText || 'Explore Channels',
-        button_link: formButtonLink || '/student?tab=channels',
+        button_text: formEnableCta ? (formButtonText || 'Explore Platform') : null,
+        button_link: formEnableCta ? (formButtonLink || '#features') : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -620,46 +623,68 @@ export function BannerManager() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Button CTA Label"
-              value={formButtonText}
-              onChange={(e) => setFormButtonText(e.target.value)}
-              placeholder="e.g. Explore Channels"
-            />
-            <Input
-              label="Button Destination URL / Route"
-              value={formButtonLink}
-              onChange={(e) => setFormButtonLink(e.target.value)}
-              placeholder="e.g. /student?tab=channels"
-            />
+          {/* Call To Action Controls */}
+          <div className="space-y-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200">
+                Call-To-Action (CTA) Button
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#6244A6] dark:text-[#BBA5F0]">
+                <input
+                  type="checkbox"
+                  checked={formEnableCta}
+                  onChange={(e) => setFormEnableCta(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#6244A6] focus:ring-[#8060CE]"
+                />
+                <span>Enable CTA Button</span>
+              </label>
+            </div>
+
+            {formEnableCta && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <Input
+                  label="Button CTA Label"
+                  value={formButtonText}
+                  onChange={(e) => setFormButtonText(e.target.value)}
+                  placeholder="e.g. Explore Platform"
+                />
+                <Input
+                  label="Button Destination URL / Route"
+                  value={formButtonLink}
+                  onChange={(e) => setFormButtonLink(e.target.value)}
+                  placeholder="e.g. #features or /student?tab=channels"
+                />
+              </div>
+            )}
           </div>
 
           {/* Live Interactive Preview */}
-          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 space-y-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-primary-500" />
-              Live Banner Preview (Student View)
+          <div className="p-4 rounded-2xl bg-[#F8F6FF] dark:bg-neutral-900/80 border border-[#DCCFFF] dark:border-neutral-800 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#6244A6] dark:text-[#BBA5F0] flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-[#8060CE]" />
+              Live Homepage Banner Preview
             </span>
-            <div className="p-4 rounded-xl bg-gradient-to-r from-purple-50 via-white to-purple-50/50 border border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="space-y-1.5 min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wide bg-purple-100 px-2 py-0.5 rounded-full inline-block">
-                  Board &amp; Competitive Preparation
+            <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-[#DCCFFF]/80 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-xs">
+              <div className="space-y-2 min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-[#6244A6] uppercase tracking-wide bg-[#EEE8FF] px-2.5 py-0.5 rounded-full inline-block border border-[#DCCFFF]">
+                  Academic Year 2026–27 • Admissions Open
                 </span>
-                <h4 className="text-base font-extrabold text-neutral-900 truncate">
-                  {formTitle || 'Learn • Practice • Achieve'}
+                <h4 className="text-base font-extrabold text-[#282238] dark:text-white truncate">
+                  {formTitle || 'World-Class Digital Tuition for K–12 Students'}
                 </h4>
-                <p className="text-xs text-neutral-600 line-clamp-2">
-                  {formDescription || 'Live Classes, Recorded Lessons, Tests & More for School and Competitive Exams.'}
+                <p className="text-xs text-[#5F5875] dark:text-neutral-400 line-clamp-2">
+                  {formDescription || 'Interactive digital classrooms, chapter-wise mastery, and real-time parent progress monitoring tailored for academic excellence.'}
                 </p>
-                <div className="pt-1">
-                  <span className="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-purple-600 shadow-xs">
-                    {formButtonText || 'Explore Channels'} →
-                  </span>
-                </div>
+                {formEnableCta && (
+                  <div className="pt-1">
+                    <span className="inline-block px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-[#6244A6] shadow-xs">
+                      {formButtonText || 'Explore Platform'} →
+                    </span>
+                  </div>
+                )}
               </div>
               {formPreview && (
-                <div className="relative w-24 h-20 rounded-xl overflow-hidden shrink-0 border border-purple-200 bg-neutral-900">
+                <div className="relative w-28 h-20 rounded-xl overflow-hidden shrink-0 border border-[#DCCFFF] bg-neutral-900">
                   <NextImage src={formPreview} alt="Preview" fill className="object-cover" unoptimized />
                 </div>
               )}
@@ -774,46 +799,68 @@ export function BannerManager() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Button CTA Label"
-              value={formButtonText}
-              onChange={(e) => setFormButtonText(e.target.value)}
-              placeholder="e.g. Explore Channels"
-            />
-            <Input
-              label="Button Destination URL / Route"
-              value={formButtonLink}
-              onChange={(e) => setFormButtonLink(e.target.value)}
-              placeholder="e.g. /student?tab=channels"
-            />
+          {/* Call To Action Controls */}
+          <div className="space-y-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-neutral-800 dark:text-neutral-200">
+                Call-To-Action (CTA) Button
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#6244A6] dark:text-[#BBA5F0]">
+                <input
+                  type="checkbox"
+                  checked={formEnableCta}
+                  onChange={(e) => setFormEnableCta(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#6244A6] focus:ring-[#8060CE]"
+                />
+                <span>Enable CTA Button</span>
+              </label>
+            </div>
+
+            {formEnableCta && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <Input
+                  label="Button CTA Label"
+                  value={formButtonText}
+                  onChange={(e) => setFormButtonText(e.target.value)}
+                  placeholder="e.g. Explore Platform"
+                />
+                <Input
+                  label="Button Destination URL / Route"
+                  value={formButtonLink}
+                  onChange={(e) => setFormButtonLink(e.target.value)}
+                  placeholder="e.g. #features or /student?tab=channels"
+                />
+              </div>
+            )}
           </div>
 
           {/* Live Interactive Preview */}
-          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 space-y-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-primary-500" />
-              Live Banner Preview (Student View)
+          <div className="p-4 rounded-2xl bg-[#F8F6FF] dark:bg-neutral-900/80 border border-[#DCCFFF] dark:border-neutral-800 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#6244A6] dark:text-[#BBA5F0] flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-[#8060CE]" />
+              Live Homepage Banner Preview
             </span>
-            <div className="p-4 rounded-xl bg-gradient-to-r from-purple-50 via-white to-purple-50/50 border border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="space-y-1.5 min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wide bg-purple-100 px-2 py-0.5 rounded-full inline-block">
-                  Board &amp; Competitive Preparation
+            <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-[#DCCFFF]/80 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-xs">
+              <div className="space-y-2 min-w-0 flex-1">
+                <span className="text-[10px] font-bold text-[#6244A6] uppercase tracking-wide bg-[#EEE8FF] px-2.5 py-0.5 rounded-full inline-block border border-[#DCCFFF]">
+                  Academic Year 2026–27 • Admissions Open
                 </span>
-                <h4 className="text-base font-extrabold text-neutral-900 truncate">
-                  {formTitle || 'Learn • Practice • Achieve'}
+                <h4 className="text-base font-extrabold text-[#282238] dark:text-white truncate">
+                  {formTitle || 'World-Class Digital Tuition for K–12 Students'}
                 </h4>
-                <p className="text-xs text-neutral-600 line-clamp-2">
-                  {formDescription || 'Live Classes, Recorded Lessons, Tests & More for School and Competitive Exams.'}
+                <p className="text-xs text-[#5F5875] dark:text-neutral-400 line-clamp-2">
+                  {formDescription || 'Interactive digital classrooms, chapter-wise mastery, and real-time parent progress monitoring tailored for academic excellence.'}
                 </p>
-                <div className="pt-1">
-                  <span className="inline-block px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-purple-600 shadow-xs">
-                    {formButtonText || 'Explore Channels'} →
-                  </span>
-                </div>
+                {formEnableCta && (
+                  <div className="pt-1">
+                    <span className="inline-block px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-[#6244A6] shadow-xs">
+                      {formButtonText || 'Explore Platform'} →
+                    </span>
+                  </div>
+                )}
               </div>
               {formPreview && (
-                <div className="relative w-24 h-20 rounded-xl overflow-hidden shrink-0 border border-purple-200 bg-neutral-900">
+                <div className="relative w-28 h-20 rounded-xl overflow-hidden shrink-0 border border-[#DCCFFF] bg-neutral-900">
                   <NextImage src={formPreview} alt="Preview" fill className="object-cover" unoptimized />
                 </div>
               )}

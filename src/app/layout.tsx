@@ -50,7 +50,7 @@ export default function RootLayout({
           id="edutech-theme-initializer"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(window.location.pathname.indexOf('/student')===0){document.documentElement.classList.remove('dark');return;}var s=localStorage.getItem('edutech-theme');if(s==='dark'||(!s&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`,
+            __html: `(function(){try{if(window.location.pathname==='/'||window.location.pathname==='/login'||window.location.pathname.indexOf('/student')===0){document.documentElement.classList.remove('dark');return;}var s=localStorage.getItem('edutech-theme');if(s==='dark'||(!s&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`,
           }}
         />
       </head>

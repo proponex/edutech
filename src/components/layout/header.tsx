@@ -159,11 +159,9 @@ export function Header() {
         { name: 'Child Analysis', href: '/parent?tab=analysis' },
       ]
     : [
-        { name: 'Courses', href: '/#courses' },
-        { name: 'Programs', href: '/#programs' },
-        { name: 'Teachers', href: '/#teachers' },
         { name: 'How It Works', href: '/#how-it-works' },
-        { name: 'For Parents', href: '/#for-parents' },
+        { name: 'Student Experiences', href: '/#experiences' },
+        { name: 'Features', href: '/#features' },
       ];
 
   const brandLink = isTeacher ? '/teacher' : isStudent ? '/student' : isParent ? '/parent' : '/';
@@ -173,7 +171,7 @@ export function Header() {
       className={`sticky top-0 z-40 w-full backdrop-blur-md transition-colors ${
         isStudent
           ? 'border-b border-lavender-border bg-white/95'
-          : 'border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/85 dark:bg-neutral-950/85'
+          : 'border-b border-[#DCCFFF]/60 bg-white/90 shadow-xs shadow-violet-900/5'
       }`}
     >
       <div className={`h-16 flex items-center justify-between ${isStudent ? 'w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto' : 'max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto'}`}>
@@ -189,11 +187,11 @@ export function Header() {
           </Link>
         ) : (
           <Link href={brandLink} className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-primary-400 flex items-center justify-center shadow-md shadow-primary-500/20 group-hover:scale-105 transition-transform">
-              <GraduationCap className="w-5 h-5 text-neutral-950" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6244A6] to-[#8060CE] flex items-center justify-center shadow-md shadow-violet-500/20 group-hover:scale-105 transition-transform text-white">
+              <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-extrabold text-xl tracking-tight text-neutral-950 dark:text-white">
+              <span className="font-display font-extrabold text-xl tracking-tight text-[#282238]">
                 EDUTECH
               </span>
             </div>
@@ -203,10 +201,8 @@ export function Header() {
         {/* Center Nav Links */}
         <NavLinksWrapper navLinks={navLinks} isTeacher={isTeacher} isStudent={isStudent} />
 
-        {/* Right Section: For Teachers: Only Profile Photo. For Students: Bell + Profile Dropdown. For Others: Theme Toggle + Auth */}
+        {/* Right Section: For Teachers: Only Profile Photo. For Students: Bell + Profile Dropdown. For Others: Auth */}
         <div className="hidden sm:flex items-center gap-3">
-          {/* Theme toggle hidden for teacher and student */}
-          {!isTeacher && !isStudent && <ThemeToggle />}
 
           {!loading && profile ? (
             isTeacher ? (
@@ -392,15 +388,15 @@ export function Header() {
               </div>
             )
           ) : !loading ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  Login
+                <Button variant="ghost" size="sm" className="text-[#5F5875] hover:text-[#282238] hover:bg-[#EEE8FF]/60 font-semibold text-sm">
+                  Sign In
                 </Button>
               </Link>
               <Link href="/signup">
-                <Button variant="primary" size="sm">
-                  Sign Up
+                <Button size="sm" className="bg-[#6244A6] hover:bg-[#8060CE] text-white shadow-sm shadow-violet-600/20 rounded-xl px-4 font-semibold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all">
+                  Create Account
                 </Button>
               </Link>
             </div>
@@ -411,14 +407,13 @@ export function Header() {
 
         {/* Mobile Hamburger Button */}
         <div className="flex items-center gap-2 md:hidden">
-          {!isTeacher && !isStudent && <ThemeToggle />}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:outline-none"
+            className="p-2 rounded-lg text-neutral-700 hover:bg-violet-50 focus:outline-none"
             aria-label="Toggle Navigation Menu"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-6 h-6 text-[#282238]" /> : <Menu className="w-6 h-6 text-[#282238]" />}
           </button>
         </div>
       </div>
@@ -642,7 +637,7 @@ function NavLinksContent({
   }
 
   return (
-    <nav className="hidden md:flex items-center gap-6">
+    <nav className="hidden md:flex items-center gap-7">
       {navLinks.map((link) => {
         const linkTab = link.href.includes('tab=') ? link.href.split('tab=')[1] : 'overview';
         const isActive = isTeacher ? currentTab === linkTab : false;
@@ -653,8 +648,8 @@ function NavLinksContent({
             href={link.href}
             className={`text-sm transition-all py-1 relative ${
               isActive
-                ? 'font-bold text-primary-600 dark:text-primary-400 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-600 dark:after:bg-primary-400 after:rounded-full'
-                : 'font-medium text-neutral-600 hover:text-primary-700 dark:text-neutral-300 dark:hover:text-primary-400'
+                ? 'font-bold text-[#6244A6] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#6244A6] after:rounded-full'
+                : 'font-medium text-[#5F5875] hover:text-[#6244A6]'
             }`}
           >
             {link.name}
