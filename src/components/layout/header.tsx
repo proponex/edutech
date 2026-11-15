@@ -168,13 +168,13 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full backdrop-blur-md transition-colors ${
+      className={`sticky top-0 z-50 w-full backdrop-blur-xl transition-all ${
         isStudent
           ? 'border-b border-lavender-border bg-white/95'
-          : 'border-b border-[#DCCFFF]/60 bg-white/90 shadow-xs shadow-violet-900/5'
+          : 'border-b border-[#DCCFFF]/80 bg-white/92 shadow-sm shadow-[#1E1035]/5'
       }`}
     >
-      <div className={`h-16 flex items-center justify-between ${isStudent ? 'w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto' : 'max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto'}`}>
+      <div className={`h-20 flex items-center justify-between ${isStudent ? 'w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto' : 'max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto'}`}>
         {/* Brand Logo */}
         {isStudent ? (
           <Link href="/student" className="flex items-center gap-2 group">
@@ -186,13 +186,16 @@ export function Header() {
             </span>
           </Link>
         ) : (
-          <Link href={brandLink} className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6244A6] to-[#8060CE] flex items-center justify-center shadow-md shadow-violet-500/20 group-hover:scale-105 transition-transform text-white">
+          <Link href={brandLink} className="flex items-center gap-3 group">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#3D1E6D] via-[#6244A6] to-[#A485E8] flex items-center justify-center shadow-lg shadow-violet-700/25 group-hover:scale-105 transition-transform text-white ring-2 ring-violet-200">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-extrabold text-xl tracking-tight text-[#282238]">
+              <span className="font-display font-black text-2xl tracking-tight bg-gradient-to-r from-[#1E1035] via-[#3D1E6D] to-[#6244A6] bg-clip-text text-transparent">
                 EDUTECH
+              </span>
+              <span className="text-[10px] font-bold text-[#6244A6] tracking-wider uppercase">
+                Digital Classroom
               </span>
             </div>
           </Link>
@@ -388,16 +391,18 @@ export function Header() {
               </div>
             )
           ) : !loading ? (
-            <div className="flex items-center gap-2.5">
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="text-[#5F5875] hover:text-[#282238] hover:bg-[#EEE8FF]/60 font-semibold text-sm">
-                  Sign In
-                </Button>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 px-4 py-2.5 text-sm text-[#3D1E6D] hover:text-[#1E1035] hover:bg-[#EEE8FF]/80"
+              >
+                Sign In
               </Link>
-              <Link href="/signup">
-                <Button size="sm" className="bg-[#6244A6] hover:bg-[#8060CE] text-white shadow-sm shadow-violet-600/20 rounded-xl px-4 font-semibold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  Create Account
-                </Button>
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 bg-gradient-to-r from-[#3D1E6D] via-[#6244A6] to-[#7A54CF] hover:from-[#4C268F] hover:to-[#6244A6] text-white shadow-md shadow-violet-900/20 px-5 py-2.5 text-sm hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Create Account
               </Link>
             </div>
           ) : (
@@ -637,7 +642,7 @@ function NavLinksContent({
   }
 
   return (
-    <nav className="hidden md:flex items-center gap-7">
+    <nav className="hidden md:flex items-center gap-8 bg-white/80 py-2 px-6 rounded-full border border-[#DCCFFF]/80 shadow-xs">
       {navLinks.map((link) => {
         const linkTab = link.href.includes('tab=') ? link.href.split('tab=')[1] : 'overview';
         const isActive = isTeacher ? currentTab === linkTab : false;
@@ -646,10 +651,10 @@ function NavLinksContent({
           <Link
             key={link.name}
             href={link.href}
-            className={`text-sm transition-all py-1 relative ${
+            className={`text-sm font-bold transition-all py-1 relative ${
               isActive
-                ? 'font-bold text-[#6244A6] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#6244A6] after:rounded-full'
-                : 'font-medium text-[#5F5875] hover:text-[#6244A6]'
+                ? 'text-[#6244A6] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#6244A6] after:rounded-full'
+                : 'text-[#3D1E6D]/80 hover:text-[#6244A6]'
             }`}
           >
             {link.name}

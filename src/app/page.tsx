@@ -10,7 +10,7 @@ import { FeaturesSection } from '@/components/home/features-section';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F6FF] text-[#282238] selection:bg-[#EEE8FF] selection:text-[#6244A6] public-landing">
+    <div className="min-h-screen flex flex-col bg-[#F8F6FF] text-[#1E1035] selection:bg-[#EEE8FF] selection:text-[#3D1E6D] public-landing">
       {/* 1. NAVIGATION HEADER */}
       <Header />
 

@@ -216,3 +216,110 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #F3E8FF;
   color: #7E22CE;
 }
+
+/* =========================================================================
+   REFERENCE DESIGN UTILITY CLASSES & KEYFRAME ANIMATIONS
+   Exact classes and animations from the visual reference
+   ========================================================================= */
+.glass-card {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.glass-dark {
+  background: rgba(26, 14, 46, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.hero-glow {
+  background: radial-gradient(circle at 40% 30%, rgba(220, 207, 255, 0.75) 0%, rgba(248, 246, 255, 0) 70%);
+}
+
+.pattern-topographic {
+  background-image: radial-gradient(#6244A6 0.75px, transparent 0.75px), radial-gradient(#8060CE 0.75px, #F8F6FF 0.75px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+  opacity: 0.12;
+}
+
+.pattern-grid {
+  background-size: 36px 36px;
+  background-image: linear-gradient(to right, rgba(98, 68, 166, 0.08) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(98, 68, 166, 0.08) 1px, transparent 1px);
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-14px) rotate(1.5deg); }
+}
+
+@keyframes floatMed {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50%       { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.4; filter: blur(24px); }
+  50%       { opacity: 0.7; filter: blur(32px); }
+}
+
+/* Fluid Organic Wave Flow Animations */
+@keyframes waveFlowX {
+  0%   { transform: translateX(0) scaleY(1); }
+  50%  { transform: translateX(-35px) scaleY(1.08); }
+  100% { transform: translateX(0) scaleY(1); }
+}
+
+@keyframes waveFlowXReverse {
+  0%   { transform: translateX(0) scaleY(1); }
+  50%  { transform: translateX(35px) scaleY(0.95); }
+  100% { transform: translateX(0) scaleY(1); }
+}
+
+@keyframes dashFlow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -60; }
+}
+
+@keyframes nodeGlow {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px #A485E8); opacity: 0.8; }
+  50%       { transform: scale(1.4); filter: drop-shadow(0 0 8px #BBA5F0); opacity: 1; }
+}
+
+.animate-float-slow          { animation: floatSlow 7s ease-in-out infinite; }
+.animate-float-medium        { animation: floatMed 5s ease-in-out infinite; }
+.animate-float-gentle        { animation: floatGentle 4s ease-in-out infinite; }
+.animate-pulse-soft          { animation: pulseSoft 3s ease-in-out infinite; }
+.animate-glow-pulse          { animation: glowPulse 4s ease-in-out infinite; }
+.animate-wave-flow           { animation: waveFlowX 10s ease-in-out infinite; }
+.animate-wave-flow-slow      { animation: waveFlowX 16s ease-in-out infinite; }
+.animate-wave-flow-reverse   { animation: waveFlowXReverse 12s ease-in-out infinite; }
+.animate-dash-flow           { animation: dashFlow 8s linear infinite; }
+.animate-node-glow           { animation: nodeGlow 3s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-slow,
+  .animate-float-medium,
+  .animate-float-gentle,
+  .animate-pulse-soft,
+  .animate-glow-pulse,
+  .animate-wave-flow,
+  .animate-wave-flow-slow,
+  .animate-wave-flow-reverse,
+  .animate-dash-flow,
+  .animate-node-glow {
+    animation: none;
+  }
+}
