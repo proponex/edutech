@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { createClient } from '@/lib/supabase/client';
 import { TeacherPricingManager } from '@/components/teacher/TeacherPricingManager';
 import { ChannelItem, Profile } from '@/types';
@@ -24,7 +25,7 @@ export default function TeacherMonetizationPage() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/login');
+          router.push('/');
           return;
         }
 
@@ -63,6 +64,7 @@ export default function TeacherMonetizationPage() {
         </Link>
         <TeacherPricingManager channels={channels} />
       </main>
+      <Footer />
     </div>
   );
 }

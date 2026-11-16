@@ -2,11 +2,9 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { UserPlus, Compass, Video, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Compass, Video, TrendingUp } from 'lucide-react';
 
 const ASSETS = {
-  journeyBg:
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuDw7EVrhLkDo5Q28M2naiK0pKMjGwbjWx_3vGW_9xXYSelLGyNY_TYbkRSZo80KJQQGxWftUJLG0TVJyqQdrP8M2w75stWVBACXBVOSX48NQtPLr9NpnObgGGIsczznIS2EltThYJ4pEsyWNijhLv0lOB3rg_kpzoKfx_i0ogZIeBHjOHuo3uYEezkynt4pKwuvA6v36utintihu5N8ujxnv6sIaQW13eGyceLO7l4',
   floatingBook: '/images/hero_books_transparent.png',
 };
 
@@ -16,7 +14,6 @@ const STEPS = [
     title: 'Create Your Account',
     description:
       'Sign up as a student, parent, or teacher in under two minutes. Set your class, board preference, and subject interests — and your personalised dashboard is ready.',
-    highlight: 'Quick Role-Based Setup',
     icon: UserPlus,
   },
   {
@@ -24,7 +21,6 @@ const STEPS = [
     title: 'Explore Your Subjects',
     description:
       'Browse your complete school syllabus chapter by chapter. Find exactly what you need — whether that\'s a single formula, a full unit, or an entire subject revision.',
-    highlight: 'Full K–12 Syllabus',
     icon: Compass,
   },
   {
@@ -32,7 +28,6 @@ const STEPS = [
     title: 'Watch & Learn at Your Pace',
     description:
       'Follow expert teacher explanations in crystal-clear video lessons. Rewatch any section, adjust playback speed, and take your time until every concept clicks.',
-    highlight: 'HD Video Lessons',
     icon: Video,
   },
   {
@@ -40,95 +35,142 @@ const STEPS = [
     title: 'Track Growth & Progress',
     description:
       'Attempt chapter quizzes to test your understanding. See your scores, identify weak areas, and let parents stay informed — all automatically updated in real time.',
-    highlight: 'Real-Time Progress Insights',
     icon: TrendingUp,
   },
 ];
 
 export function HowItWorksSection() {
   return (
-    <section className="py-20 lg:py-28 bg-[#180C2E] relative overflow-hidden text-white" id="how-it-works">
-      {/* Rich 3D Stepping Stone Educational Journey Background Layer (IMAGE_11) */}
-      <div className="absolute inset-0 pointer-events-none select-none overflow-hidden mix-blend-screen opacity-45">
-        <Image
-          src={ASSETS.journeyBg}
-          alt="3D Educational Stepping Stones Journey Texture"
-          fill
-          className="object-cover object-center scale-105"
-          unoptimized
-        />
-      </div>
+    <section className="py-20 lg:py-28 bg-gradient-to-b from-[#F8F6FF] via-[#FAF8FF] to-[#F8F6FF] relative overflow-hidden text-[#1E1035]" id="how-it-works">
+      {/* Ambient background grid */}
+      <div className="absolute inset-0 pattern-grid pointer-events-none opacity-30" />
 
-      {/* Radial Violet Dark Atmosphere & Constellation Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#180C2E]/90 via-[#221040]/75 to-[#180C2E]/95 pointer-events-none" />
+      {/* Atmospheric Glowing Orbs */}
+      <div className="absolute top-20 left-1/4 w-96 h-96 bg-[#DCCFFF]/60 rounded-full blur-3xl opacity-50 pointer-events-none -z-10 animate-glow-pulse" />
+      <div className="absolute bottom-20 right-1/4 w-[500px] h-[500px] bg-[#EEE8FF]/70 rounded-full blur-3xl opacity-60 pointer-events-none -z-10" />
 
-      {/* Geometric SVG Pathway / Constellation Graphic with Active Dash & Node Animations */}
-      <div className="absolute inset-0 pointer-events-none select-none opacity-40">
-        <svg className="w-full h-full" fill="none" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      {/* =============================================================== */}
+      {/* MULTIPLE DARK VIOLET WAVES BESIDE THE CARDS (LEFT & RIGHT FLANKS) */}
+      {/* =============================================================== */}
+
+      {/* Left Flank: Multiple Layered Dark Violet Waves */}
+      <div className="absolute left-0 top-0 bottom-0 w-44 sm:w-64 lg:w-80 pointer-events-none select-none overflow-hidden z-10 opacity-85">
+        <svg
+          className="h-full w-full animate-wave-flow"
+          fill="none"
+          preserveAspectRatio="none"
+          viewBox="0 0 320 800"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Deep Dark Violet Base Wave */}
           <path
-            d="M100 200 L350 280 L650 240 L950 320 L1100 250"
-            stroke="#BBA5F0"
-            strokeDasharray="6 6"
-            strokeWidth="2"
-            className="animate-dash-flow"
+            d="M-80 0 C140 180 -40 380 160 520 C240 600 80 720 -80 800 Z"
+            fill="#1E1035"
+            fillOpacity="0.45"
           />
+          {/* Rich Violet Middle Wave */}
           <path
-            d="M150 550 L420 480 L750 560 L1050 490"
-            stroke="#8060CE"
-            strokeDasharray="4 4"
-            strokeWidth="1.5"
-            className="animate-dash-flow"
+            d="M-100 0 C120 120 20 280 180 440 C280 540 100 700 -100 800 Z"
+            fill="#2A174E"
+            fillOpacity="0.65"
+            className="animate-wave-flow-slow"
           />
-          <circle cx="100" cy="200" fill="#A485E8" r="5" className="animate-node-glow" />
-          <circle cx="350" cy="280" fill="#A485E8" r="6" className="animate-node-glow [animation-delay:600ms]" />
-          <circle cx="650" cy="240" fill="#A485E8" r="5" className="animate-node-glow [animation-delay:1200ms]" />
-          <circle cx="950" cy="320" fill="#A485E8" r="7" className="animate-node-glow [animation-delay:1800ms]" />
-          <circle cx="1100" cy="250" fill="#A485E8" r="5" className="animate-node-glow [animation-delay:2400ms]" />
+          {/* Accent Purple Crest Wave */}
+          <path
+            d="M-120 0 C80 160 -20 320 120 480 C200 580 40 720 -120 800 Z"
+            fill="#3D1E6D"
+            fillOpacity="0.8"
+            className="animate-wave-flow-reverse"
+          />
+          {/* Bright Violet Highlight Ribbon */}
+          <path
+            d="M-140 0 C60 200 -30 360 80 520 C140 620 10 740 -140 800 Z"
+            fill="#6244A6"
+            fillOpacity="0.9"
+          />
         </svg>
       </div>
 
-      {/* Floating Accent Book Decor with 100% Transparent Background */}
-      <div className="absolute top-10 right-10 w-24 opacity-60 pointer-events-none select-none hidden lg:block animate-float-slow">
+      {/* Right Flank: Multiple Layered Dark Violet Waves */}
+      <div className="absolute right-0 top-0 bottom-0 w-44 sm:w-64 lg:w-80 pointer-events-none select-none overflow-hidden z-10 opacity-85">
+        <svg
+          className="h-full w-full animate-wave-flow-reverse"
+          fill="none"
+          preserveAspectRatio="none"
+          viewBox="0 0 320 800"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Deep Dark Violet Base Wave */}
+          <path
+            d="M400 0 C180 180 360 380 160 520 C80 600 240 720 400 800 Z"
+            fill="#1E1035"
+            fillOpacity="0.45"
+          />
+          {/* Rich Violet Middle Wave */}
+          <path
+            d="M420 0 C200 120 300 280 140 440 C40 540 220 700 420 800 Z"
+            fill="#2A174E"
+            fillOpacity="0.65"
+            className="animate-wave-flow-slow"
+          />
+          {/* Accent Purple Crest Wave */}
+          <path
+            d="M440 0 C240 160 340 320 200 480 C120 580 280 720 440 800 Z"
+            fill="#3D1E6D"
+            fillOpacity="0.8"
+            className="animate-wave-flow"
+          />
+          {/* Bright Violet Highlight Ribbon */}
+          <path
+            d="M460 0 C260 200 350 360 240 520 C180 620 310 740 460 800 Z"
+            fill="#6244A6"
+            fillOpacity="0.9"
+          />
+        </svg>
+      </div>
+
+      {/* Floating 3D Accent Books */}
+      <div className="absolute top-12 right-12 w-20 aspect-square opacity-70 pointer-events-none select-none hidden xl:block animate-float-slow z-20">
         <Image
           src={ASSETS.floatingBook}
           alt="Floating Book Decor"
-          width={100}
-          height={100}
-          className="w-full drop-shadow-2xl"
+          fill
+          sizes="80px"
+          className="object-contain drop-shadow-2xl"
           unoptimized
         />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
         <div className="text-center max-w-3xl mx-auto mb-16 lg:mb-20 space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-[#DCCFFF] text-xs font-bold border border-violet-400/30 shadow-lg">
-            <span className="w-2 h-2 rounded-full bg-[#BBA5F0] animate-ping" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white text-[#3D1E6D] text-xs font-black border border-[#DCCFFF] shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-[#6244A6] animate-ping" />
             <span>HOW IT WORKS</span>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-black text-[#1E1035] tracking-tight">
             Your Path to Academic Success
           </h2>
-          <p className="text-base sm:text-lg text-violet-200/80 leading-relaxed font-normal">
+          <p className="text-base sm:text-lg text-[#5F5875] leading-relaxed font-normal">
             Four simple steps from signing up to achieving the results you&apos;ve been working toward.
           </p>
         </div>
 
-        {/* 4 Elevated Glass Cards Above Background Pattern */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 relative">
+        {/* 4 Elevated Clean Cards with High Contrast on Light Ground */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 relative z-20">
           {STEPS.map((step) => {
             const Icon = step.icon;
             return (
               <div
                 key={step.number}
-                className="group relative rounded-3xl bg-white/95 backdrop-blur-xl border border-violet-300/40 hover:border-violet-300 p-7 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-2xl shadow-black/30 hover:-translate-y-2 hover:shadow-violet-500/20"
+                className="group relative rounded-3xl bg-white/95 backdrop-blur-md border border-[#DCCFFF] hover:border-[#6244A6] p-7 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-xl shadow-violet-950/5 hover:-translate-y-2 hover:shadow-2xl hover:shadow-violet-900/15"
               >
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <span className="font-display text-4xl font-black bg-gradient-to-r from-[#3D1E6D] to-[#6244A6] bg-clip-text text-transparent group-hover:scale-105 transition-transform">
                       {step.number}
                     </span>
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center text-[#3D1E6D] shadow-sm transition-all duration-300 group-hover:scale-110">
-                      <Icon className="w-5 h-5 text-[#3D1E6D]" />
+                    <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center text-[#3D1E6D] shadow-xs transition-all duration-300 group-hover:scale-110 group-hover:bg-[#3D1E6D] group-hover:text-white">
+                      <Icon className="w-5 h-5" />
                     </div>
                   </div>
 
@@ -136,14 +178,9 @@ export function HowItWorksSection() {
                     {step.title}
                   </h3>
 
-                  <p className="text-sm text-[#5F5875] leading-relaxed mb-6">
+                  <p className="text-sm text-[#5F5875] leading-relaxed">
                     {step.description}
                   </p>
-                </div>
-
-                <div className="pt-4 border-t border-[#DCCFFF]/80 flex items-center gap-2 text-xs font-bold text-[#3D1E6D]">
-                  <CheckCircle2 className="w-4 h-4 text-[#6244A6] shrink-0" />
-                  <span>{step.highlight}</span>
                 </div>
               </div>
             );
@@ -151,8 +188,8 @@ export function HowItWorksSection() {
         </div>
       </div>
 
-      {/* Section Bottom Divider into Lavender with Flowing Wave Motion */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none select-none overflow-hidden">
+      {/* Section Bottom Divider into Features with Flowing Wave Motion */}
+      <div className="w-full pointer-events-none select-none -mb-1 mt-16 lg:mt-24 overflow-hidden">
         <svg
           className="w-[105%] -ml-[2.5%] h-14 sm:h-20 lg:h-24"
           fill="none"
@@ -162,19 +199,19 @@ export function HowItWorksSection() {
         >
           <path
             d="M0,30 C360,90 720,0 1080,60 C1260,90 1380,40 1440,50 L1440,100 L0,100 Z"
-            fill="#2A174E"
-            fillOpacity="0.6"
+            fill="#EEE8FF"
+            fillOpacity="0.75"
             className="animate-wave-flow"
           />
           <path
             d="M0,45 C280,10 600,80 920,40 C1200,5 1360,60 1440,50 L1440,100 L0,100 Z"
             fill="#DCCFFF"
-            fillOpacity="0.5"
+            fillOpacity="0.6"
             className="animate-wave-flow-reverse"
           />
           <path
             d="M0,60 C400,20 800,80 1200,40 C1320,30 1400,50 1440,55 L1440,100 L0,100 Z"
-            fill="#F8F6FF"
+            fill="#FFFFFF"
             className="animate-wave-flow-slow"
           />
         </svg>

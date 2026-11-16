@@ -229,13 +229,13 @@ export function TeacherSubjectMonetization({ channels }: { channels: ChannelItem
         prev.map((r, i) =>
           i === index
             ? {
-                ...r,
-                teacherBasePaise: basePaise,
-                platformFeePaise: feePaise,
-                studentPricePaise: studentPaise,
-                isEditing: false,
-                saving: false,
-              }
+              ...r,
+              teacherBasePaise: basePaise,
+              platformFeePaise: feePaise,
+              studentPricePaise: studentPaise,
+              isEditing: false,
+              saving: false,
+            }
             : r
         )
       );
@@ -646,11 +646,11 @@ export function TeacherSubjectMonetization({ channels }: { channels: ChannelItem
                                     prev.map((r, i) =>
                                       i === idx
                                         ? {
-                                            ...r,
-                                            tempBaseRupees: val,
-                                            platformFeePaise: feeP,
-                                            studentPricePaise: baseP + feeP,
-                                          }
+                                          ...r,
+                                          tempBaseRupees: val,
+                                          platformFeePaise: feeP,
+                                          studentPricePaise: baseP + feeP,
+                                        }
                                         : r
                                     )
                                   );

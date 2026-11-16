@@ -109,7 +109,7 @@ function ParentDashboardContent() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/login');
+          router.push('/');
           return;
         }
 
@@ -285,7 +285,7 @@ function ParentDashboardContent() {
   // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push('/');
     router.refresh();
   };
 

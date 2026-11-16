@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { ThemeToggle } from '@/components/theme-toggle';
 import { GraduationCap, AlertCircle, UserPlus, CheckCircle2, BookOpen, Camera, Trash2, X, User } from 'lucide-react';
 import { UserRole, ClassItem, BoardItem } from '@/types';
+import { Footer } from '@/components/layout/footer';
 import { TeacherService, DEFAULT_LANGUAGES } from '@/lib/teacher-service';
 import { StudentService } from '@/lib/student-service';
 
@@ -645,7 +646,7 @@ export default function SignUpPage() {
           <CardFooter className="justify-center text-xs text-neutral-500 dark:text-neutral-400">
             <span>Already have an account? </span>
             <Link
-              href="/login"
+              href="/"
               className="text-primary-600 dark:text-primary-400 hover:underline font-semibold ml-1"
             >
               Sign In
@@ -654,9 +655,7 @@ export default function SignUpPage() {
         </Card>
       </main>
 
-      <footer className="py-4 text-center text-xs text-neutral-400">
-        Edutech &bull; Empowering learners everywhere
-      </footer>
+      <Footer />
     </div>
   );
 }

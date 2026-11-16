@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const ASSETS = {
-  studyTableScene: '/images/study_desk_transparent.png',
+  hdVideoLesson: '/images/hd_video_lesson_transparent.png',
   stackedBooksMini: '/images/hero_books_transparent.png',
 };
 
@@ -55,15 +55,15 @@ export function FeaturesSection() {
                 </p>
               </div>
 
-              {/* 3D Study Illustration inside HD Card with 100% Transparent Background */}
+              {/* 3D HD Video Lesson Illustration with 100% Transparent Background */}
               <div className="sm:col-span-4 flex justify-center">
-                <div className="w-44 sm:w-52 group-hover:scale-105 transition-transform duration-300">
+                <div className="relative w-48 sm:w-56 aspect-[680/497] group-hover:scale-105 transition-transform duration-300">
                   <Image
-                    src={ASSETS.studyTableScene}
-                    alt="3D Study Table Scene with pastel books and lamp"
-                    width={220}
-                    height={180}
-                    className="w-full h-auto object-contain drop-shadow-xl filter contrast-[1.02]"
+                    src={ASSETS.hdVideoLesson}
+                    alt="3D Educational HD Video Lesson Tablet with Play Controls and Formulas"
+                    fill
+                    sizes="(max-width: 640px) 192px, 224px"
+                    className="object-contain drop-shadow-xl filter contrast-[1.02]"
                     unoptimized
                   />
                 </div>
@@ -138,13 +138,13 @@ export function FeaturesSection() {
                 <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] text-[#3D1E6D] flex items-center justify-center shadow-xs transition-transform duration-300 group-hover:scale-110">
                   <Layers className="w-6 h-6 text-[#3D1E6D]" />
                 </div>
-                <div className="w-14 h-14 transition-transform duration-300 group-hover:scale-110">
+                <div className="relative w-14 h-14 aspect-square transition-transform duration-300 group-hover:scale-110">
                   <Image
                     src={ASSETS.stackedBooksMini}
                     alt="Stacked 3D colorful books"
-                    width={56}
-                    height={56}
-                    className="w-full h-full object-contain filter drop-shadow-md"
+                    fill
+                    sizes="56px"
+                    className="object-contain filter drop-shadow-md"
                     unoptimized
                   />
                 </div>

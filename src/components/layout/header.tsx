@@ -20,12 +20,21 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [teacherMenuOpen, setTeacherMenuOpen] = useState(false);
   const [studentMenuOpen, setStudentMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const studentMenuRef = useRef<HTMLDivElement>(null);
+  const teacherMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (studentMenuRef.current && !studentMenuRef.current.contains(event.target as Node)) {
         setStudentMenuOpen(false);
+      }
+      if (teacherMenuRef.current && !teacherMenuRef.current.contains(event.target as Node)) {
+        setTeacherMenuOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -96,16 +105,21 @@ export function Header() {
     };
   }, [supabase]);
 
+  // If on public landing page ('/'), do not render any navbar at all
+  if (pathname === '/') {
+    return null;
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setProfile(null);
     setTeacherMenuOpen(false);
-    router.push('/login');
+    router.push('/');
     router.refresh();
   };
 
   const getDashboardUrl = () => {
-    if (!profile) return '/login';
+    if (!profile) return '/';
     switch (profile.role) {
       case 'admin':
         return '/admin';
@@ -160,46 +174,60 @@ export function Header() {
       ]
     : [
         { name: 'How It Works', href: '/#how-it-works' },
-        { name: 'Student Experiences', href: '/#experiences' },
         { name: 'Features', href: '/#features' },
       ];
 
   const brandLink = isTeacher ? '/teacher' : isStudent ? '/student' : isParent ? '/parent' : '/';
 
   return (
-    <header
-      className={`sticky top-0 z-50 w-full backdrop-blur-xl transition-all ${
-        isStudent
-          ? 'border-b border-lavender-border bg-white/95'
-          : 'border-b border-[#DCCFFF]/80 bg-white/92 shadow-sm shadow-[#1E1035]/5'
-      }`}
-    >
-      <div className={`h-20 flex items-center justify-between ${isStudent ? 'w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto' : 'max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto'}`}>
+    <header className="sticky top-0 z-50 w-full backdrop-blur-xl transition-all relative border-b border-[#DCCFFF] bg-[#EEE8FF]/95 shadow-sm text-[#1E1035]">
+      {/* Animated Fast-Moving Particles Across All Dashboards */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10 select-none">
+        {/* Ambient Glowing Orbs */}
+        <div className="absolute -top-10 left-1/4 w-80 h-32 bg-[#BBA5F0]/25 rounded-full blur-2xl animate-glow-pulse" />
+        <div className="absolute -top-10 right-1/4 w-80 h-32 bg-[#DCCFFF]/35 rounded-full blur-2xl animate-glow-pulse" style={{ animationDelay: '2s' }} />
+
+        {/* Fast-Streaming Flying Particles Across The Navbar */}
+        <div className="absolute top-3 left-[4%] w-2 h-2 rounded-full bg-[#6244A6] opacity-80 animate-particle-fast-stream shadow-[0_0_12px_#6244A6]" />
+        <div className="absolute top-10 left-[22%] w-2.5 h-2.5 rounded-full bg-[#8060CE] opacity-75 animate-particle-fast-stream shadow-[0_0_10px_#8060CE]" style={{ animationDelay: '0.9s' }} />
+        <div className="absolute top-4 left-[42%] w-2 h-2 rounded-full bg-[#4C268F] opacity-75 animate-particle-fast-stream shadow-[0_0_12px_#4C268F]" style={{ animationDelay: '1.6s' }} />
+
+        {/* Fast Reverse-Streaming Flying Particles */}
+        <div className="absolute top-5 right-[8%] w-2 h-2 rounded-full bg-[#4C268F] opacity-75 animate-particle-fast-stream-rev shadow-[0_0_10px_#4C268F]" style={{ animationDelay: '0.3s' }} />
+        <div className="absolute top-11 right-[28%] w-2.5 h-2.5 rounded-full bg-[#6244A6] opacity-70 animate-particle-fast-stream-rev shadow-[0_0_12px_#6244A6]" style={{ animationDelay: '1.4s' }} />
+        <div className="absolute top-3 right-[48%] w-2 h-2 rounded-full bg-[#8060CE] opacity-75 animate-particle-fast-stream-rev shadow-[0_0_10px_#8060CE]" style={{ animationDelay: '2.1s' }} />
+
+        {/* Drifting & Shimmering Nodes */}
+        <div className="absolute top-2 left-[12%] w-2 h-2 rounded-full bg-[#8060CE] opacity-65 animate-particle-drift-right shadow-[0_0_8px_#8060CE]" />
+        <div className="absolute top-11 left-[32%] w-2.5 h-2.5 rounded-full bg-[#6244A6] opacity-60 animate-particle-drift-left shadow-[0_0_10px_#6244A6]" style={{ animationDelay: '0.6s' }} />
+        <div className="absolute top-4 left-[58%] w-1.5 h-1.5 rounded-full bg-[#4C268F] opacity-80 animate-particle-shimmer shadow-[0_0_8px_#4C268F]" style={{ animationDelay: '0.4s' }} />
+        <div className="absolute top-12 left-[72%] w-2 h-2 rounded-full bg-[#8060CE] opacity-65 animate-particle-drift-right shadow-[0_0_10px_#8060CE]" style={{ animationDelay: '1.3s' }} />
+        <div className="absolute top-4 left-[88%] w-1.5 h-1.5 rounded-full bg-[#4C268F] opacity-80 animate-particle-shimmer shadow-[0_0_8px_#4C268F]" style={{ animationDelay: '1.8s' }} />
+      </div>
+
+      <div className="h-20 flex items-center justify-between relative z-10 w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto">
         {/* Brand Logo */}
-        {isStudent ? (
-          <Link href="/student" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-100 shadow-xs group-hover:scale-105 transition-transform">
-              <GraduationCap className="w-5 h-5 text-brand-600" />
-            </div>
-            <span className="font-display font-extrabold text-2xl tracking-tight text-navy-900">
-              Prepnx
+        <Link href={brandLink} className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3D1E6D] via-[#6244A6] to-[#A485E8] flex items-center justify-center text-white border border-[#DCCFFF] shadow-md shadow-violet-900/15 group-hover:scale-105 transition-transform ring-2 ring-[#EEE8FF]">
+            <GraduationCap className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-display font-black text-xl tracking-tight text-[#1E1035] group-hover:text-[#130924] transition-colors">
+              EDUTECH
             </span>
-          </Link>
-        ) : (
-          <Link href={brandLink} className="flex items-center gap-3 group">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#3D1E6D] via-[#6244A6] to-[#A485E8] flex items-center justify-center shadow-lg shadow-violet-700/25 group-hover:scale-105 transition-transform text-white ring-2 ring-violet-200">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-display font-black text-2xl tracking-tight bg-gradient-to-r from-[#1E1035] via-[#3D1E6D] to-[#6244A6] bg-clip-text text-transparent">
-                EDUTECH
-              </span>
-              <span className="text-[10px] font-bold text-[#6244A6] tracking-wider uppercase">
-                Digital Classroom
-              </span>
-            </div>
-          </Link>
-        )}
+            <span className="text-[10px] font-bold text-[#6244A6] tracking-widest uppercase">
+              {isStudent
+                ? 'Student Portal'
+                : isTeacher
+                ? 'Teacher Portal'
+                : isParent
+                ? 'Parent Portal'
+                : profile?.role === 'admin'
+                ? 'Admin Portal'
+                : 'Digital Classroom'}
+            </span>
+          </div>
+        </Link>
 
         {/* Center Nav Links */}
         <NavLinksWrapper navLinks={navLinks} isTeacher={isTeacher} isStudent={isStudent} />
@@ -210,11 +238,11 @@ export function Header() {
           {!loading && profile ? (
             isTeacher ? (
               /* Requirement 1: Teacher profile photo only in header */
-              <div className="relative">
+              <div className="relative" ref={teacherMenuRef}>
                 <button
                   type="button"
                   onClick={() => setTeacherMenuOpen(!teacherMenuOpen)}
-                  className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary-500 hover:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all hover:scale-105 shadow-sm shrink-0 flex items-center justify-center bg-primary-100 dark:bg-primary-950/60 cursor-pointer"
+                  className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-[#6244A6] hover:border-[#4C268F] focus:outline-none focus:ring-2 focus:ring-[#6244A6] transition-all hover:scale-105 shadow-sm shrink-0 flex items-center justify-center bg-white cursor-pointer"
                   title="Teacher Profile & Account"
                   aria-label="Open teacher profile menu"
                 >
@@ -228,58 +256,143 @@ export function Header() {
                       unoptimized
                     />
                   ) : (
-                    <User className="w-5 h-5 text-primary-700 dark:text-primary-300" />
+                    <User className="w-5 h-5 text-[#6244A6]" />
                   )}
                 </button>
 
                 {/* Dropdown Menu */}
                 {teacherMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95">
-                    <div className="px-4 py-2 border-b border-neutral-100 dark:border-neutral-800">
-                      <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">
+                  <div className="absolute right-0 mt-3 w-60 rounded-2xl bg-white border border-[#DCCFFF] shadow-2xl shadow-[#1E1035]/15 py-2 z-[100] animate-in fade-in zoom-in-95 backdrop-blur-xl text-[#1E1035]">
+                    <div className="px-4 py-2.5 border-b border-[#EEE8FF]">
+                      <p className="text-sm font-bold text-[#1E1035] truncate">
                         {profile.name || 'Educator'}
                       </p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate font-mono">
+                      <p className="text-xs text-[#5F5875] truncate font-mono">
                         {profile.email}
                       </p>
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary-100 dark:bg-primary-950 text-primary-800 dark:text-primary-300 uppercase">
-                        Teacher Account
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF] uppercase tracking-wide">
+                        Teacher Portal
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer text-left"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </button>
+                    <div className="py-1 text-xs font-semibold">
+                      <Link
+                        href="/teacher?tab=overview"
+                        onClick={() => setTeacherMenuOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-[#EEE8FF] text-[#1E1035] hover:text-[#130924] transition-colors text-left cursor-pointer"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-[#6244A6]" />
+                        Teacher Dashboard
+                      </Link>
+                      <Link
+                        href="/teacher/earnings"
+                        onClick={() => setTeacherMenuOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-[#EEE8FF] text-[#1E1035] hover:text-[#130924] transition-colors text-left cursor-pointer"
+                      >
+                        <CreditCard className="w-4 h-4 text-[#6244A6]" />
+                        Earnings &amp; Payouts
+                      </Link>
+                    </div>
+                    <div className="pt-1 border-t border-[#EEE8FF]">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer text-left"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             ) : isStudent ? (
-              /* Prepnx Student Header: Bell + Dropdown Avatar */
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {}}
-                  className="relative w-10 h-10 rounded-full flex items-center justify-center text-navy-800 hover:text-brand-600 hover:bg-brand-50 transition-colors cursor-pointer"
-                  title="Notifications"
-                  aria-label="View notifications"
-                >
-                  <Bell className="w-5 h-5 text-navy-800" />
-                  <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-white" />
-                </button>
+              /* Prepnx Student Header: Bell + Dropdown Avatar in Lavender & Dark Font Theme */
+              <div className="flex items-center gap-2.5">
+                {/* Notifications Dropdown */}
+                <div className="relative" ref={notificationsRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotificationsOpen(!notificationsOpen);
+                      setStudentMenuOpen(false);
+                    }}
+                    className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer backdrop-blur-md shadow-xs ${
+                      notificationsOpen
+                        ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] font-bold'
+                        : 'bg-white text-[#1E1035] hover:bg-[#EEE8FF] hover:text-[#130924] border border-[#DCCFFF]'
+                    }`}
+                    title="Notifications"
+                    aria-label="View notifications"
+                  >
+                    <Bell className="w-4.5 h-4.5 text-[#1E1035] group-hover:text-[#130924]" />
+                    <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#6244A6] ring-2 ring-white" />
+                  </button>
 
+                  {notificationsOpen && (
+                    <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl bg-white border border-[#DCCFFF] shadow-2xl shadow-[#1E1035]/15 p-4 z-[100] animate-in fade-in zoom-in-95 backdrop-blur-xl text-[#1E1035]">
+                      <div className="flex items-center justify-between pb-3 border-b border-[#EEE8FF]">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-extrabold text-sm text-[#1E1035]">Notifications</h3>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
+                            2 New
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNotificationsOpen(false)}
+                          className="text-xs font-semibold text-[#5F5875] hover:text-[#130924] transition-colors cursor-pointer"
+                        >
+                          Mark all as read
+                        </button>
+                      </div>
+
+                      <div className="py-2.5 space-y-2.5 max-h-72 overflow-y-auto">
+                        <div className="p-3 rounded-xl bg-[#F8F6FF] border border-[#EEE8FF] hover:bg-[#EEE8FF] transition-colors">
+                          <p className="text-xs font-bold text-[#1E1035]">🎉 Welcome to EduTech Portal</p>
+                          <p className="text-[11px] text-[#5F5875] mt-1 leading-relaxed">
+                            Explore your academic curriculum, syllabus notes, and video channels.
+                          </p>
+                          <span className="text-[10px] font-semibold text-[#6244A6] mt-1.5 block">Just now</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-[#F8F6FF] border border-[#EEE8FF] hover:bg-[#EEE8FF] transition-colors">
+                          <p className="text-xs font-bold text-[#1E1035]">📚 New Lesson Available</p>
+                          <p className="text-[11px] text-[#5F5875] mt-1 leading-relaxed">
+                            Class 12 Mathematics video lessons and notes are ready for you.
+                          </p>
+                          <span className="text-[10px] font-semibold text-[#6244A6] mt-1.5 block">2 hours ago</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2.5 border-t border-[#EEE8FF] text-center">
+                        <Link
+                          href="/student"
+                          onClick={() => setNotificationsOpen(false)}
+                          className="text-xs font-bold text-[#6244A6] hover:text-[#130924] transition-colors"
+                        >
+                          View All Dashboard Updates
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Profile Menu Dropdown */}
                 <div className="relative" ref={studentMenuRef}>
                   <button
                     type="button"
-                    onClick={() => setStudentMenuOpen(!studentMenuOpen)}
-                    className="flex items-center gap-1.5 p-1 pr-2.5 rounded-full border border-lavender-border hover:border-brand-400 bg-white transition-all cursor-pointer group shadow-2xs"
+                    onClick={() => {
+                      setStudentMenuOpen(!studentMenuOpen);
+                      setNotificationsOpen(false);
+                    }}
+                    className={`flex items-center gap-2 p-1 pr-2.5 rounded-full transition-all cursor-pointer group shadow-xs ${
+                      studentMenuOpen
+                        ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6]'
+                        : 'border border-[#DCCFFF] hover:border-[#6244A6] bg-white text-[#1E1035] hover:bg-[#EEE8FF] hover:text-[#130924]'
+                    }`}
                     title="Student Profile & Menu"
                     aria-label="Open student menu"
                   >
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-brand-200 flex items-center justify-center bg-brand-50 shrink-0">
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#DCCFFF] flex items-center justify-center bg-[#EEE8FF] shrink-0">
                       {profile.photo_url ? (
                         <Image
                           src={profile.photo_url}
@@ -290,22 +403,22 @@ export function Header() {
                           unoptimized
                         />
                       ) : (
-                        <User className="w-4 h-4 text-brand-600" />
+                        <User className="w-4 h-4 text-[#6244A6]" />
                       )}
                     </div>
-                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-600 transition-colors" />
+                    <ChevronDown className="w-3.5 h-3.5 text-[#1E1035] group-hover:text-[#130924] transition-colors" />
                   </button>
 
                   {studentMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-lavender-border shadow-xl py-2 z-50 animate-in fade-in zoom-in-95">
-                      <div className="px-4 py-2.5 border-b border-gray-100">
-                        <p className="text-sm font-bold text-navy-900 truncate">
+                    <div className="absolute right-0 mt-3 w-60 rounded-2xl bg-white border border-[#DCCFFF] shadow-2xl shadow-[#1E1035]/15 py-2 z-[100] animate-in fade-in zoom-in-95 backdrop-blur-xl text-[#1E1035]">
+                      <div className="px-4 py-2.5 border-b border-[#EEE8FF]">
+                        <p className="text-sm font-bold text-[#1E1035] truncate">
                           {profile.name || 'Prepnx Student'}
                         </p>
-                        <p className="text-xs text-gray-500 truncate font-mono">
+                        <p className="text-xs text-[#5F5875] truncate font-mono">
                           {profile.email}
                         </p>
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-100 text-brand-800 uppercase tracking-wide">
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF] uppercase tracking-wide">
                           Student Portal
                         </span>
                       </div>
@@ -317,9 +430,9 @@ export function Header() {
                             setStudentMenuOpen(false);
                             handleStudentProfileClick();
                           }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-brand-50 text-gray-700 hover:text-brand-700 transition-colors text-left cursor-pointer"
+                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-[#EEE8FF] text-[#1E1035] hover:text-[#130924] transition-colors text-left cursor-pointer"
                         >
-                          <User className="w-4 h-4 text-brand-600" />
+                          <User className="w-4 h-4 text-[#6244A6]" />
                           My Profile
                         </button>
                         <button
@@ -328,37 +441,37 @@ export function Header() {
                             setStudentMenuOpen(false);
                             handleStudentProfileClick();
                           }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-brand-50 text-gray-700 hover:text-brand-700 transition-colors text-left cursor-pointer"
+                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-[#EEE8FF] text-[#1E1035] hover:text-[#130924] transition-colors text-left cursor-pointer"
                         >
-                          <Settings className="w-4 h-4 text-brand-600" />
+                          <Settings className="w-4 h-4 text-[#6244A6]" />
                           Account Settings
                         </button>
                         <Link
                           href="/student/payments"
                           onClick={() => setStudentMenuOpen(false)}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-brand-50 text-gray-700 hover:text-brand-700 transition-colors text-left cursor-pointer"
+                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-[#EEE8FF] text-[#1E1035] hover:text-[#130924] transition-colors text-left cursor-pointer"
                         >
-                          <CreditCard className="w-4 h-4 text-brand-600" />
+                          <CreditCard className="w-4 h-4 text-[#6244A6]" />
                           My Subscriptions
                         </Link>
                         <Link
                           href="/#help-center"
                           onClick={() => setStudentMenuOpen(false)}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-brand-50 text-gray-700 hover:text-brand-700 transition-colors text-left cursor-pointer"
+                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-[#EEE8FF] text-[#1E1035] hover:text-[#130924] transition-colors text-left cursor-pointer"
                         >
-                          <HelpCircle className="w-4 h-4 text-brand-600" />
+                          <HelpCircle className="w-4 h-4 text-[#6244A6]" />
                           Help &amp; Support
                         </Link>
                       </div>
 
-                      <div className="pt-1 border-t border-gray-100">
+                      <div className="pt-1 border-t border-[#EEE8FF]">
                         <button
                           type="button"
                           onClick={() => {
                             setStudentMenuOpen(false);
                             handleLogout();
                           }}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
+                          className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer text-left"
                         >
                           <LogOut className="w-4 h-4" />
                           Sign Out
@@ -369,31 +482,33 @@ export function Header() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <Badge variant="primary" className="capitalize text-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white text-[#1E1035] border border-[#DCCFFF] capitalize shadow-xs">
                   {profile.role}
-                </Badge>
+                </span>
                 <Link href={getDashboardUrl()}>
-                  <Button size="sm" variant="outline" className="flex items-center gap-1.5">
-                    <LayoutDashboard className="w-3.5 h-3.5" />
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#1E1035] hover:bg-[#DCCFFF] hover:text-[#130924] border border-[#DCCFFF] transition-all cursor-pointer shadow-xs hover:border-[#6244A6]"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 text-[#6244A6]" />
                     Dashboard
-                  </Button>
+                  </button>
                 </Link>
-                <Button
-                  size="sm"
-                  variant="ghost"
+                <button
+                  type="button"
                   onClick={handleLogout}
-                  className="text-neutral-600 dark:text-neutral-400 hover:text-red-600 dark:hover:text-red-400"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5 mr-1" />
+                  <LogOut className="w-3.5 h-3.5" />
                   Logout
-                </Button>
+                </button>
               </div>
             )
           ) : !loading ? (
             <div className="flex items-center gap-3">
               <Link
-                href="/login"
+                href="/"
                 className="inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 px-4 py-2.5 text-sm text-[#3D1E6D] hover:text-[#1E1035] hover:bg-[#EEE8FF]/80"
               >
                 Sign In
@@ -415,17 +530,31 @@ export function Header() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-neutral-700 hover:bg-violet-50 focus:outline-none"
+            className={`p-2 rounded-lg focus:outline-none transition-colors ${
+              isStudent
+                ? 'text-[#1E1035] hover:bg-[#EEE8FF] hover:text-[#130924]'
+                : 'text-neutral-700 hover:bg-violet-50'
+            }`}
             aria-label="Toggle Navigation Menu"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6 text-[#282238]" /> : <Menu className="w-6 h-6 text-[#282238]" />}
+            {mobileMenuOpen ? (
+              <X className="w-6 h-6 text-[#1E1035]" />
+            ) : (
+              <Menu className="w-6 h-6 text-[#1E1035]" />
+            )}
           </button>
         </div>
       </div>
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-4 space-y-3">
+        <div
+          className={`md:hidden border-b px-4 py-4 space-y-3 ${
+            isStudent
+              ? 'bg-white border-[#DCCFFF] text-[#1E1035]'
+              : 'border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950'
+          }`}
+        >
           <NavLinksWrapper
             navLinks={navLinks}
             isTeacher={isTeacher}
@@ -433,38 +562,40 @@ export function Header() {
             mobile
             onNavigate={() => setMobileMenuOpen(false)}
           />
-          <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800 flex flex-col gap-2">
+          <div className="pt-3 border-t border-[#EEE8FF] flex flex-col gap-2">
             {profile ? (
               <>
                 <div className="flex items-center justify-between px-2 py-1">
-                  <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                    Logged in as <strong className="text-neutral-900 dark:text-white">{profile.name}</strong>
+                  <span className="text-sm font-medium text-[#5F5875]">
+                    Logged in as <strong className="text-[#1E1035]">{profile.name}</strong>
                   </span>
-                  <Badge variant="primary" className="capitalize">
+                  <Badge variant="primary" className="capitalize text-[#1E1035]">
                     {profile.role}
                   </Badge>
                 </div>
                 {isStudent ? (
                   <>
-                    <Button
-                      variant="primary"
-                      size="md"
+                    <button
+                      type="button"
                       onClick={() => {
                         setMobileMenuOpen(false);
                         handleStudentProfileClick();
                       }}
-                      className="w-full bg-brand-600 hover:bg-brand-700 text-white"
+                      className="w-full py-2.5 px-4 rounded-xl text-sm font-black bg-[#EEE8FF] hover:bg-[#DCCFFF] text-[#1E1035] hover:text-[#130924] border border-[#BBA5F0] transition-colors"
                     >
                       View Student Profile
-                    </Button>
+                    </button>
                     <Link
                       href="/student/payments"
                       onClick={() => setMobileMenuOpen(false)}
                       className="w-full"
                     >
-                      <Button variant="outline" size="md" className="w-full">
+                      <button
+                        type="button"
+                        className="w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-white hover:bg-[#F8F6FF] text-[#1E1035] hover:text-[#130924] border border-[#DCCFFF] transition-colors"
+                      >
                         My Subscriptions
-                      </Button>
+                      </button>
                     </Link>
                   </>
                 ) : (
@@ -489,7 +620,7 @@ export function Header() {
               </>
             ) : (
               <div className="flex gap-2">
-                <Link href="/login" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="outline" size="md" className="w-full">
                     Login
                   </Button>
@@ -524,7 +655,7 @@ function NavLinksWrapper({
   return (
     <Suspense
       fallback={
-        <nav className={mobile ? 'flex flex-col gap-2' : 'hidden md:flex items-center gap-6'}>
+        <nav className={mobile ? 'flex flex-col gap-2' : 'hidden md:flex items-center gap-2 p-1.5 rounded-full bg-white/80 border border-[#DCCFFF]'}>
           {navLinks.map((link) => (
             <Link
               key={link.name}
@@ -532,8 +663,8 @@ function NavLinksWrapper({
               onClick={onNavigate}
               className={
                 mobile
-                  ? 'px-3 py-2 rounded-lg text-sm font-medium text-neutral-700 dark:text-neutral-200'
-                  : 'text-sm font-medium text-neutral-600 hover:text-primary-700 dark:text-neutral-300 dark:hover:text-primary-400 transition-colors'
+                  ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-[#1E1035] border border-[#DCCFFF]'
+                  : 'px-4 py-1.5 rounded-full text-sm font-bold bg-white text-[#1E1035] border border-[#DCCFFF]'
               }
             >
               {link.name}
@@ -570,67 +701,42 @@ function NavLinksContent({
   const searchParams = useSearchParams();
   const currentTab = searchParams?.get('tab') || 'overview';
 
+  const checkIsActive = (link: { name: string; href: string }) => {
+    const linkTab = link.href.includes('tab=') ? link.href.split('tab=')[1] : null;
+    if (isTeacher) {
+      return currentTab === (linkTab || 'overview');
+    }
+    if (isStudent) {
+      if (link.name === 'Home') {
+        return pathname === '/student' && (!searchParams?.get('tab') || currentTab === 'home');
+      }
+      if (linkTab) {
+        return currentTab === linkTab;
+      }
+      if (link.href.includes('payments')) {
+        return pathname === '/student/payments' || currentTab === 'payments' || currentTab === 'subscription';
+      }
+    }
+    if (linkTab) {
+      return currentTab === linkTab;
+    }
+    return pathname === link.href;
+  };
+
   if (mobile) {
     return (
       <nav className="flex flex-col gap-1.5">
         {navLinks.map((link) => {
-          const linkTab = link.href.includes('tab=') ? link.href.split('tab=')[1] : 'overview';
-          let isActive = false;
-          if (isTeacher) {
-            isActive = currentTab === linkTab;
-          } else if (isStudent) {
-            if (link.name === 'Home') {
-              isActive = pathname === '/student' && (!searchParams?.get('tab') || currentTab === 'home');
-            } else if (linkTab) {
-              isActive = currentTab === linkTab;
-            } else if (link.href.includes('payments')) {
-              isActive = pathname === '/student/payments' || currentTab === 'payments' || currentTab === 'subscription';
-            }
-          }
-
+          const isActive = checkIsActive(link);
           return (
             <Link
               key={link.name}
               href={link.href}
               onClick={onNavigate}
-              className={`px-3 py-2.5 rounded-xl text-sm transition-all ${
+              className={`px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
                 isActive
-                  ? isStudent
-                    ? 'font-bold bg-[#F3E8FF] text-[#7E22CE] border border-[#E9DDF8]'
-                    : 'font-bold bg-primary-50 dark:bg-primary-950/80 text-primary-700 dark:text-primary-300 border border-primary-200/80 dark:border-primary-800/80'
-                  : 'font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-              }`}
-            >
-              {link.name}
-            </Link>
-          );
-        })}
-      </nav>
-    );
-  }
-
-  if (isStudent) {
-    return (
-      <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-lavender-50 border border-[#E9DDF8]">
-        {navLinks.map((link) => {
-          const linkTab = link.href.includes('tab=') ? link.href.split('tab=')[1] : null;
-          let isActive = false;
-          if (link.name === 'Home') {
-            isActive = pathname === '/student' && (!searchParams?.get('tab') || currentTab === 'home');
-          } else if (linkTab) {
-            isActive = currentTab === linkTab;
-          } else if (link.href.includes('payments')) {
-            isActive = pathname === '/student/payments' || currentTab === 'payments' || currentTab === 'subscription';
-          }
-
-          return (
-            <Link
-              key={link.name}
-              href={link.href}
-              className={`px-4 py-1.5 rounded-full text-sm transition-all ${
-                isActive
-                  ? 'bg-[#F3E8FF] text-[#7E22CE] border border-[#E9DDF8] font-bold shadow-2xs'
-                  : 'text-[#68647D] hover:text-[#17133A] font-medium hover:bg-white/80'
+                  ? 'font-black bg-[#DCCFFF] text-[#130924] border-2 border-[#6244A6] shadow-sm'
+                  : 'font-bold bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#DCCFFF] hover:text-[#130924]'
               }`}
             >
               {link.name}
@@ -642,19 +748,17 @@ function NavLinksContent({
   }
 
   return (
-    <nav className="hidden md:flex items-center gap-8 bg-white/80 py-2 px-6 rounded-full border border-[#DCCFFF]/80 shadow-xs">
+    <nav className="hidden md:flex items-center gap-2 p-1.5 rounded-full bg-white/80 border border-[#DCCFFF] shadow-inner backdrop-blur-md">
       {navLinks.map((link) => {
-        const linkTab = link.href.includes('tab=') ? link.href.split('tab=')[1] : 'overview';
-        const isActive = isTeacher ? currentTab === linkTab : false;
-
+        const isActive = checkIsActive(link);
         return (
           <Link
             key={link.name}
             href={link.href}
-            className={`text-sm font-bold transition-all py-1 relative ${
+            className={`px-4 py-1.5 rounded-full text-sm transition-all duration-200 cursor-pointer ${
               isActive
-                ? 'text-[#6244A6] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#6244A6] after:rounded-full'
-                : 'text-[#3D1E6D]/80 hover:text-[#6244A6]'
+                ? 'bg-[#DCCFFF] text-[#130924] border-2 border-[#6244A6] font-black shadow-xs scale-[1.02] hover:text-[#130924]'
+                : 'bg-white text-[#1E1035] border border-[#DCCFFF] font-bold hover:bg-[#DCCFFF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-xs hover:-translate-y-0.5 hover:scale-[1.03]'
             }`}
           >
             {link.name}

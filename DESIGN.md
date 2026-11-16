@@ -1,7 +1,7 @@
 # EduTech Design System (DESIGN.md)
 
 **Project:** EduTech Public Platform Redesign  
-**Version:** 4.0 (3D Educational Centerpiece & Luxury Violet Art Direction)  
+**Version:** 5.0 (Clean Light Theme How-It-Works, Dark Violet Flanking Waves, Streamlined Banner & Login)  
 **Target:** Public Web Landing Page, Header, Hero, and Promotional Surfaces  
 **Mode:** Persuade & Clarify (High Craft, Photorealistic 3D Composition, Distinctive Typography, Flowing Waves)  
 
@@ -11,14 +11,13 @@
 
 EduTech's public landing page matches the elite reference composition:
 
-- **Photorealistic 3D Educational Accents:** Real-rendered 3D assets (study books, ultrabooks with study charts, stepping stone journeys, cozy pastel study desks, and 8k luxury fluid wave ribbons).
+- **Photorealistic 3D Educational Accents:** Real-rendered 3D assets (study books, ultrabooks with study charts, 3D HD video lesson tablet with play controls, and 8k luxury fluid wave ribbons).
 - **Architectural 11:9 Split-Screen Hero:**
-  - Left: Full visual promotional banner with 3D laptop centerpiece, floating stacked books, board certification badges (`CBSE • ICSE • State Boards`), 4.9★ rating chip, and the *Class 12 Comprehensive Prep* progress card.
-  - Right: High-contrast white card with top gradient stripe, role switcher pills (`Student`, `Parent`, `Teacher`), email/password inputs, and role-based redirects.
+  - Left: Clean visual promotional banner with 3D laptop centerpiece, floating stacked books, and the *Class 12 Comprehensive Prep* progress card (uncluttered by badges or ratings).
+  - Right: High-contrast white card with top gradient stripe, email/password inputs, and role-based redirects.
 - **Narrative Centerpiece Banner:** *Designed from the Ground Up for Real Academic Mastery* with ambient grid overlay, textbook checklist, and 3D floating laptop with alphabet book.
-- **How It Works (Dark Violet Sanctuary):** `#180C2E` rich dark violet canvas with 3D educational stepping stone texture, constellation graphics, and 4 elevated glass cards (`bg-white/95 backdrop-blur-xl`).
-- **Student Experiences:** `#F8F6FF` canvas with wave contour patterns, cozy pastel study desk scene, and verified reviews.
-- **Features:** Editorial bento grid with topographical lilac pattern, 3D study table scene, and curriculum metrics.
+- **How It Works (Light Theme with Dark Violet Waves):** `#F8F6FF` light canvas with multiple cascading dark violet wave ribbons flanking the cards on the left and right, framing 4 elevated clean white cards.
+- **Features:** Editorial bento grid with topographical lilac pattern, dedicated 3D HD video lesson tablet, and curriculum metrics.
 - **Footer:** Luxury dark violet ground (`#130924`) with 8k fluid neon wave texture.
 
 ---
@@ -49,8 +48,7 @@ All 3D assets have been processed into 32-bit RGBA PNGs (`hasAlpha: true`) with 
 | **3D Stacked Books** | `/images/hero_books_transparent.png` | Hero floating decor, Curriculum Card, How-It-Works |
 | **3D Education Laptop Centerpiece** | `/images/hero_laptop_transparent.png` | Hero Left Promotional Banner |
 | **3D Floating Laptop with Alphabet Book** | `/images/centerpiece_narrative_transparent.png` | Narrative Centerpiece Banner |
-| **Cozy Pastel Study Desk Scene** | `/images/study_desk_transparent.png` | Student Experiences (Reviews) & HD Video Lesson Card |
-| **3D Stepping Stones Journey Texture** | Cloud Asset (`AB6AXuDw7EVrhLkDo...`) | How It Works Ambient Background Layer (`mix-blend-screen`) |
+| **3D HD Video Lesson Tablet** | `/images/hd_video_lesson_transparent.png` | HD Video Lesson Card with play controls & physics formulas |
 | **8k Fluid Waves Luxury Texture** | Cloud Asset (`AB6AXuDuUU5e1L...`) | Luxury Dark Violet Footer with smooth fade mask |
 
 ---

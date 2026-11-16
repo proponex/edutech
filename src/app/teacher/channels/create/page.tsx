@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,7 +76,7 @@ export default function CreateChannelPage() {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.push('/login');
+          router.push('/');
           return;
         }
         if (isMounted) setTeacherId(user.id);
@@ -876,6 +877,7 @@ export default function CreateChannelPage() {
           </CardContent>
         </Card>
       </main>
+      <Footer />
     </div>
   );
 }

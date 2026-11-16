@@ -12,16 +12,18 @@ const ASSETS = {
 
 export function Footer() {
   return (
-    <footer className="bg-[#130924] border-t border-violet-900/60 text-[#DCCFFF] relative overflow-hidden">
-      {/* Background 8k Fluid Waves Luxury Texture (IMAGE_10) with Smooth Fade Mask */}
-      <div className="absolute inset-0 pointer-events-none opacity-25 mix-blend-screen overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_20%,black_80%,transparent)]">
+    <footer className="mt-auto w-full bg-[#130924] border-t border-violet-900/60 text-[#DCCFFF] relative overflow-hidden">
+      {/* Background Fluid Waves Texture covering complete size (full sides and bottom) */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden select-none">
         <Image
           src={ASSETS.fluidWaveFooter}
           alt="Deluxe Dark Violet Wave Texture"
           fill
-          className="object-cover object-bottom scale-105"
+          className="object-cover object-bottom w-full h-full opacity-65 mix-blend-screen"
           unoptimized
         />
+        {/* Subtle overlay for optimal contrast and text clarity while preserving full edge-to-edge wave coverage */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#130924]/60 via-[#130924]/30 to-[#130924]/65 pointer-events-none" />
       </div>
 
       {/* Gradient Glow Elements for Atmospheric Depth */}
@@ -48,12 +50,6 @@ export function Footer() {
             <p className="text-sm text-violet-200/80 max-w-sm leading-relaxed font-normal">
               A comprehensive digital replacement for traditional tuition. Tailored for Kindergarten through Class 12 students, parents, and certified educators.
             </p>
-            <div className="pt-2">
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-[#2A174E]/90 text-[#DCCFFF] border border-violet-500/40 shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-[#A485E8] animate-ping" />
-                Admissions Open for Academic Year 2026–27
-              </span>
-            </div>
           </div>
 
           {/* Col 2: Explore */}
@@ -63,19 +59,14 @@ export function Footer() {
             </h4>
             <ul className="space-y-3 text-sm font-semibold">
               <li>
-                <a className="text-violet-200/90 hover:text-white transition-colors flex items-center gap-2" href="#how-it-works">
+                <Link className="text-violet-200/90 hover:text-white transition-colors flex items-center gap-2" href="/#how-it-works">
                   <span>How It Works</span>
-                </a>
+                </Link>
               </li>
               <li>
-                <a className="text-violet-200/90 hover:text-white transition-colors flex items-center gap-2" href="#experiences">
-                  <span>Student Experiences</span>
-                </a>
-              </li>
-              <li>
-                <a className="text-violet-200/90 hover:text-white transition-colors flex items-center gap-2" href="#features">
+                <Link className="text-violet-200/90 hover:text-white transition-colors flex items-center gap-2" href="/#features">
                   <span>Platform Features</span>
-                </a>
+                </Link>
               </li>
               <li>
                 <Link className="text-violet-200/90 hover:text-white transition-colors flex items-center gap-2" href="/signup">
@@ -107,7 +98,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link className="text-violet-200/90 hover:text-white transition-colors" href="/login">
+                <Link className="text-violet-200/90 hover:text-white transition-colors" href="/">
                   Account Sign In
                 </Link>
               </li>

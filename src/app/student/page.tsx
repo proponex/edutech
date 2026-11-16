@@ -7,7 +7,6 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
-import { PrepnxFooter } from '@/components/student/PrepnxFooter';
 import { HeroCarousel } from '@/components/home/hero-carousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -200,7 +199,7 @@ function StudentDashboardContent() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/login');
+          router.push('/');
           return;
         }
 
@@ -363,11 +362,11 @@ function StudentDashboardContent() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      router.push('/login');
+      router.push('/');
       router.refresh();
     } catch (err) {
       console.error('Logout error:', err);
-      router.push('/login');
+      router.push('/');
     }
   };
 
@@ -521,19 +520,20 @@ function StudentDashboardContent() {
   }
 
   return (
-    <div className="prepnx-student-theme min-h-screen flex flex-col bg-[#FAF9FF] text-[#17133A] transition-colors">
+    <div className="prepnx-student-theme min-h-screen flex flex-col bg-[#F8F6FF] text-[#1E1035] transition-colors">
       <Header />
 
-      {currentTab === 'home' ? (
-        <PrepnxStudentHome
-          profile={profile}
-          studentId={studentId}
-          allClasses={allClasses}
-          onOpenProfile={() => setIsProfileOpen(true)}
-          onLogout={handleLogout}
-        />
-      ) : (
-        <main className="flex-1 w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-8 space-y-10 font-sans">
+      <div className="flex-1">
+        {currentTab === 'home' ? (
+          <PrepnxStudentHome
+            profile={profile}
+            studentId={studentId}
+            allClasses={allClasses}
+            onOpenProfile={() => setIsProfileOpen(true)}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <main className="w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-8 space-y-10 font-sans">
         {/* ======================================================================= */}
         {/* VIEW: TAB === 'PARENT-REQUESTS' OR TAB === 'STUDENT-ID' (FALLBACK) */}
         {/* ======================================================================= */}
@@ -552,34 +552,34 @@ function StudentDashboardContent() {
         {currentTab === 'search' && (
           <div className="space-y-8">
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[#9333EA] text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
                 <Search className="w-4 h-4" />
                 <span>Search &amp; Discovery</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] font-display">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
                 Search Tutor
               </h2>
-              <p className="text-xs sm:text-sm text-[#68647D]">
+              <p className="text-xs sm:text-sm text-[#5F5875]">
                 Find educators by channel name, or fine-tune with the Help Me Find My Tutor preference questionnaire.
               </p>
             </div>
 
             {/* Channel-Name Search Bar */}
             <div className="relative max-w-3xl">
-              <div className="flex items-center rounded-2xl border-2 border-[#E9DDF8] bg-white p-2 shadow-2xs focus-within:border-[#9333EA] focus-within:ring-4 focus-within:ring-[#9333EA]/10 transition-all">
-                <Search className="w-5 h-5 text-[#68647D]/60 ml-3 shrink-0" />
+              <div className="flex items-center rounded-2xl border-2 border-[#DCCFFF] bg-white p-2 shadow-2xs focus-within:border-[#6244A6] focus-within:ring-4 focus-within:ring-[#6244A6]/10 transition-all">
+                <Search className="w-5 h-5 text-[#5F5875]/60 ml-3 shrink-0" />
                 <input
                   type="text"
                   value={searchTutorQuery}
                   onChange={(e) => setSearchTutorQuery(e.target.value)}
                   placeholder="Search by Channel Name (e.g. Physics Studio, Verma Classes)..."
-                  className="w-full px-3 py-2 text-sm sm:text-base bg-transparent text-[#17133A] placeholder:text-[#68647D]/50 focus:outline-none"
+                  className="w-full px-3 py-2 text-sm sm:text-base bg-transparent text-[#1E1035] placeholder:text-[#5F5875]/50 focus:outline-none"
                 />
                 {searchTutorQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchTutorQuery('')}
-                    className="p-1.5 text-[#68647D] hover:text-[#17133A] mr-1"
+                    className="p-1.5 text-[#5F5875] hover:text-[#1E1035] mr-1"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -589,9 +589,9 @@ function StudentDashboardContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowSearchFilter(!showSearchFilter)}
-                  className="shrink-0 text-xs font-bold rounded-xl flex items-center gap-1.5 border-[#E9DDF8] hover:bg-[#F3E8FF] text-[#17133A]"
+                  className="shrink-0 text-xs font-bold rounded-xl flex items-center gap-1.5 border-[#DCCFFF] hover:bg-[#EEE8FF] text-[#1E1035]"
                 >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#9333EA]" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#6244A6]" />
                   {showSearchFilter ? 'Hide Filter' : 'Show Filter'}
                 </Button>
               </div>
@@ -614,14 +614,14 @@ function StudentDashboardContent() {
             {/* Filtered Channel Results */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base sm:text-lg font-bold text-[#17133A] flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-[#1E1035] flex items-center gap-2">
                   <span>Matched Channels</span>
-                  <Badge variant="secondary" className="text-xs bg-[#F3E8FF] text-[#9333EA] font-bold border-0">
+                  <Badge variant="secondary" className="text-xs bg-[#EEE8FF] text-[#6244A6] font-bold border-0">
                     {displayedChannels.length}
                   </Badge>
                 </h3>
                 {searchTutorQuery && (
-                  <span className="text-xs text-[#68647D]">
+                  <span className="text-xs text-[#5F5875]">
                     Filtered by name: &ldquo;{searchTutorQuery}&rdquo;
                   </span>
                 )}
@@ -630,8 +630,8 @@ function StudentDashboardContent() {
               {channelsLoading ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {[1, 2].map((i) => (
-                    <div key={i} className="animate-pulse h-48 border border-[#E9DDF8] bg-white rounded-3xl p-6">
-                      <div className="h-full bg-[#F3E8FF] rounded-2xl" />
+                    <div key={i} className="animate-pulse h-48 border border-[#DCCFFF] bg-white rounded-3xl p-6">
+                      <div className="h-full bg-[#EEE8FF] rounded-2xl" />
                     </div>
                   ))}
                 </div>
@@ -640,9 +640,9 @@ function StudentDashboardContent() {
                   {displayedChannels.map((channel) => (
                     <div
                       key={channel.id}
-                      className="border border-[#E9DDF8] bg-white rounded-3xl p-5 sm:p-6 hover:shadow-md hover:border-[#9333EA]/40 transition-all flex flex-col sm:flex-row items-start gap-5 sm:gap-6 group"
+                      className="border border-[#DCCFFF] bg-white rounded-3xl p-5 sm:p-6 hover:shadow-md hover:border-[#6244A6]/40 transition-all flex flex-col sm:flex-row items-start gap-5 sm:gap-6 group"
                     >
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-[#F3E8FF] border border-[#E9DDF8] shrink-0 flex items-center justify-center">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
                         {channel.photo_url ? (
                           <Image
                             src={channel.photo_url}
@@ -653,24 +653,24 @@ function StudentDashboardContent() {
                             unoptimized
                           />
                         ) : (
-                          <Tv className="w-10 h-10 text-[#9333EA]" />
+                          <Tv className="w-10 h-10 text-[#6244A6]" />
                         )}
                       </div>
 
                       <div className="flex-1 flex flex-col justify-between min-w-0 w-full space-y-3">
                         <div>
                           <Link href={`/channels/${channel.id}`}>
-                            <h4 className="text-lg font-extrabold text-[#17133A] group-hover:text-[#9333EA] transition-colors truncate">
+                            <h4 className="text-lg font-extrabold text-[#1E1035] group-hover:text-[#6244A6] transition-colors truncate">
                               {channel.name}
                             </h4>
                           </Link>
-                          <p className="text-xs text-[#68647D] mt-1 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-[#5F5875] mt-1 line-clamp-2 leading-relaxed">
                             {channel.description || 'Comprehensive tuition lessons and assignments.'}
                           </p>
                           <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500 mt-1.5">
                             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                             <span>{channel.rating ? channel.rating.toFixed(1) : '5.0'}</span>
-                            <span className="text-[#68647D] font-medium">
+                            <span className="text-[#5F5875] font-medium">
                               ({channel.review_count || 12} reviews)
                             </span>
                           </div>
@@ -678,12 +678,12 @@ function StudentDashboardContent() {
 
                         <div className="flex items-center gap-2 pt-1">
                           <Link href={`/channels/${channel.id}`}>
-                            <Button variant="outline" size="sm" className="px-4 font-bold border-[#E9DDF8] text-[#17133A] hover:bg-[#F3E8FF] rounded-xl">
+                            <Button variant="outline" size="sm" className="px-4 font-bold border-[#DCCFFF] text-[#1E1035] hover:bg-[#EEE8FF] rounded-xl">
                               View
                             </Button>
                           </Link>
                           <Link href={`/channels/${channel.id}?action=subscribe`}>
-                            <Button size="sm" className="px-5 font-extrabold shadow-sm bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
+                            <Button size="sm" className="px-5 font-extrabold shadow-sm bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
                               Subscribe
                             </Button>
                           </Link>
@@ -693,14 +693,14 @@ function StudentDashboardContent() {
                   ))}
                 </div>
               ) : (
-                <div className="border border-[#E9DDF8] bg-white rounded-3xl p-10 text-center space-y-3 shadow-xs">
-                  <div className="w-12 h-12 rounded-2xl bg-[#F3E8FF] border border-[#E9DDF8] flex items-center justify-center mx-auto text-[#9333EA]">
+                <div className="border border-[#DCCFFF] bg-white rounded-3xl p-10 text-center space-y-3 shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center mx-auto text-[#6244A6]">
                     <Search className="w-6 h-6" />
                   </div>
-                  <h4 className="text-base font-bold text-[#17133A]">
+                  <h4 className="text-base font-bold text-[#1E1035]">
                     No matching teacher channels found.
                   </h4>
-                  <p className="text-xs text-[#68647D] max-w-sm mx-auto">
+                  <p className="text-xs text-[#5F5875] max-w-sm mx-auto">
                     Try searching with another channel name or adjusting your grade and board filters.
                   </p>
                 </div>
@@ -716,27 +716,27 @@ function StudentDashboardContent() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-[#9333EA] text-xs font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
                   <Tv className="w-4 h-4" />
                   <span>Learning Channels</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] font-display">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
                   My Channels &amp; Classrooms
                 </h2>
-                <p className="text-xs sm:text-sm text-[#68647D]">
+                <p className="text-xs sm:text-sm text-[#5F5875]">
                   Access your enrolled classroom channels or discover additional verified educator channels.
                 </p>
               </div>
 
               {/* View Switcher Pills */}
-              <div className="inline-flex p-1 rounded-2xl bg-[#F3E8FF]/60 border border-[#E9DDF8] self-start sm:self-center">
+              <div className="inline-flex p-1 rounded-2xl bg-[#EEE8FF]/60 border border-[#DCCFFF] self-start sm:self-center">
                 <button
                   type="button"
                   onClick={() => setChannelFilterMode('all')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     channelFilterMode === 'all'
-                      ? 'bg-white text-[#17133A] shadow-2xs'
-                      : 'text-[#68647D] hover:text-[#17133A]'
+                      ? 'bg-white text-[#1E1035] shadow-2xs'
+                      : 'text-[#5F5875] hover:text-[#1E1035]'
                   }`}
                 >
                   All Channels ({channels.length > 0 ? channels.length : subscriptions.length})
@@ -746,12 +746,12 @@ function StudentDashboardContent() {
                   onClick={() => setChannelFilterMode('enrolled')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     channelFilterMode === 'enrolled'
-                      ? 'bg-[#9333EA] text-white shadow-2xs'
-                      : 'text-[#68647D] hover:text-[#17133A]'
+                      ? 'bg-[#6244A6] text-white shadow-2xs'
+                      : 'text-[#5F5875] hover:text-[#1E1035]'
                   }`}
                 >
                   <span>Enrolled</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${channelFilterMode === 'enrolled' ? 'bg-white/20 text-white' : 'bg-[#E9DDF8] text-[#9333EA]'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${channelFilterMode === 'enrolled' ? 'bg-white/20 text-white' : 'bg-[#DCCFFF] text-[#6244A6]'}`}>
                     {subscriptions.length}
                   </span>
                 </button>
@@ -767,11 +767,11 @@ function StudentDashboardContent() {
                     return (
                       <div
                         key={subscription.id}
-                        className="border border-[#E9DDF8] bg-white rounded-3xl p-6 shadow-xs hover:shadow-md hover:border-[#9333EA]/40 transition-all flex flex-col justify-between space-y-4"
+                        className="border border-[#DCCFFF] bg-white rounded-3xl p-6 shadow-xs hover:shadow-md hover:border-[#6244A6]/40 transition-all flex flex-col justify-between space-y-4"
                       >
                         <div className="space-y-3">
                           <div className="flex items-start gap-4">
-                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#F3E8FF] border border-[#E9DDF8] shrink-0 flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
                               {channel.photo_url ? (
                                 <Image
                                   src={channel.photo_url}
@@ -782,12 +782,12 @@ function StudentDashboardContent() {
                                   unoptimized
                                 />
                               ) : (
-                                <Tv className="w-8 h-8 text-[#9333EA]" />
+                                <Tv className="w-8 h-8 text-[#6244A6]" />
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8]">
+                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
                                   {subscription.package_type ? subscription.package_type.replace(/_/g, ' ') : 'Channel'}
                                 </span>
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
@@ -795,38 +795,38 @@ function StudentDashboardContent() {
                                   Active
                                 </span>
                               </div>
-                              <h3 className="text-base font-extrabold text-[#17133A] truncate">
+                              <h3 className="text-base font-extrabold text-[#1E1035] truncate">
                                 {channel.name}
                               </h3>
-                              <p className="text-xs text-[#68647D] truncate">
+                              <p className="text-xs text-[#5F5875] truncate">
                                 By {teacher?.name || 'Educator'}
                               </p>
                             </div>
                           </div>
 
                           {/* Progress */}
-                          <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] space-y-1.5">
+                          <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-1.5">
                             <div className="flex justify-between text-xs font-semibold">
-                              <span className="text-[#68647D]">Syllabus Completion</span>
-                              <span className="text-[#9333EA] font-bold">
+                              <span className="text-[#5F5875]">Syllabus Completion</span>
+                              <span className="text-[#6244A6] font-bold">
                                 {progress?.percentage || 0}%
                               </span>
                             </div>
-                            <div className="w-full h-2 bg-[#F3E8FF] rounded-full overflow-hidden border border-[#E9DDF8]">
+                            <div className="w-full h-2 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]">
                               <div
-                                className="h-full bg-[#9333EA] rounded-full transition-all duration-300"
+                                className="h-full bg-[#6244A6] rounded-full transition-all duration-300"
                                 style={{ width: `${Math.max(progress?.percentage || 0, 3)}%` }}
                               />
                             </div>
-                            <span className="text-[10px] text-[#68647D] block text-right">
+                            <span className="text-[10px] text-[#5F5875] block text-right">
                               {progress?.completed || 0} of {progress?.total || 0} activities done
                             </span>
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-[#E9DDF8] flex items-center gap-2">
+                        <div className="pt-2 border-t border-[#DCCFFF] flex items-center gap-2">
                           <Link href={`/channels/${channel.id}`} className="flex-1">
-                            <Button size="sm" className="w-full font-bold shadow-xs bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
+                            <Button size="sm" className="w-full font-bold shadow-xs bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
                               <span>Enter Classroom</span>
                               <ArrowRight className="w-4 h-4 ml-1.5" />
                             </Button>
@@ -836,7 +836,7 @@ function StudentDashboardContent() {
                             variant="outline"
                             size="sm"
                             onClick={() => openChannelDetails(channel, teacher, subscription, progress)}
-                            className="p-2 border-[#E9DDF8] text-[#9333EA] hover:bg-[#F3E8FF] rounded-xl shrink-0 cursor-pointer"
+                            className="p-2 border-[#DCCFFF] text-[#6244A6] hover:bg-[#EEE8FF] rounded-xl shrink-0 cursor-pointer"
                             title="View detailed learning analytics & lesson breakdown"
                           >
                             <ArrowRight className="w-4 h-4" />
@@ -847,15 +847,15 @@ function StudentDashboardContent() {
                   })}
                 </div>
               ) : (
-                <div className="border border-[#E9DDF8] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
-                  <div className="w-16 h-16 rounded-3xl bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center mx-auto">
+                <div className="border border-[#DCCFFF] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
+                  <div className="w-16 h-16 rounded-3xl bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center mx-auto">
                     <Tv className="w-8 h-8" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-[#17133A] font-display">
+                    <h3 className="text-lg font-bold text-[#1E1035] font-display">
                       No Joined Channels Yet
                     </h3>
-                    <p className="text-xs sm:text-sm text-[#68647D] max-w-md mx-auto leading-relaxed">
+                    <p className="text-xs sm:text-sm text-[#5F5875] max-w-md mx-auto leading-relaxed">
                       You have not subscribed to any teacher channels yet. Switch to "All Channels" to explore and subscribe.
                     </p>
                   </div>
@@ -863,7 +863,7 @@ function StudentDashboardContent() {
                     <Button
                       size="md"
                       onClick={() => setChannelFilterMode('all')}
-                      className="font-bold shadow-sm bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl"
+                      className="font-bold shadow-sm bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl"
                     >
                       Browse All Channels
                     </Button>
@@ -880,11 +880,11 @@ function StudentDashboardContent() {
                   return (
                     <div
                       key={channel.id}
-                      className="border border-[#E9DDF8] bg-white rounded-3xl p-6 shadow-xs hover:border-[#9333EA]/40 transition-all flex flex-col justify-between space-y-4"
+                      className="border border-[#DCCFFF] bg-white rounded-3xl p-6 shadow-xs hover:border-[#6244A6]/40 transition-all flex flex-col justify-between space-y-4"
                     >
                       <div className="space-y-3">
                         <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#F3E8FF] border border-[#E9DDF8] shrink-0 flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
                             {channel.photo_url ? (
                               <Image
                                 src={channel.photo_url}
@@ -895,7 +895,7 @@ function StudentDashboardContent() {
                                 unoptimized
                               />
                             ) : (
-                              <Tv className="w-8 h-8 text-[#9333EA]" />
+                              <Tv className="w-8 h-8 text-[#6244A6]" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -906,16 +906,16 @@ function StudentDashboardContent() {
                                   Enrolled
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8] flex items-center gap-1">
+                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF] flex items-center gap-1">
                                   <Lock className="w-3 h-3" />
                                   Locked
                                 </span>
                               )}
                             </div>
-                            <h3 className="text-base font-extrabold text-[#17133A] truncate">
+                            <h3 className="text-base font-extrabold text-[#1E1035] truncate">
                               {channel.name}
                             </h3>
-                            <p className="text-xs text-[#68647D] line-clamp-2 mt-0.5">
+                            <p className="text-xs text-[#5F5875] line-clamp-2 mt-0.5">
                               {channel.description || 'Comprehensive tuition lessons and syllabus.'}
                             </p>
                           </div>
@@ -923,36 +923,36 @@ function StudentDashboardContent() {
 
                         {/* If enrolled: show progress. If locked: show 28-day subscription badge */}
                         {isEnrolled ? (
-                          <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] space-y-1.5">
+                          <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-1.5">
                             <div className="flex justify-between text-xs font-semibold">
-                              <span className="text-[#68647D]">Your Progress</span>
-                              <span className="text-[#9333EA] font-bold">
+                              <span className="text-[#5F5875]">Your Progress</span>
+                              <span className="text-[#6244A6] font-bold">
                                 {subItem?.progress?.percentage || 0}%
                               </span>
                             </div>
-                            <div className="w-full h-2 bg-[#F3E8FF] rounded-full overflow-hidden border border-[#E9DDF8]">
+                            <div className="w-full h-2 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]">
                               <div
-                                className="h-full bg-[#9333EA] rounded-full transition-all duration-300"
+                                className="h-full bg-[#6244A6] rounded-full transition-all duration-300"
                                 style={{ width: `${Math.max(subItem?.progress?.percentage || 0, 3)}%` }}
                               />
                             </div>
                           </div>
                         ) : (
-                          <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] flex items-center justify-between text-xs">
-                            <span className="text-[#68647D] flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-[#9333EA]" />
+                          <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] flex items-center justify-between text-xs">
+                            <span className="text-[#5F5875] flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-[#6244A6]" />
                               <span>Access Period:</span>
                             </span>
-                            <span className="font-bold text-[#17133A]">28 Days per cycle</span>
+                            <span className="font-bold text-[#1E1035]">28 Days per cycle</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="pt-2 border-t border-[#E9DDF8] flex items-center gap-2">
+                      <div className="pt-2 border-t border-[#DCCFFF] flex items-center gap-2">
                         {isEnrolled ? (
                           <div className="flex items-center gap-2 w-full">
                             <Link href={`/channels/${channel.id}`} className="flex-1">
-                              <Button size="sm" className="w-full font-bold shadow-xs bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
+                              <Button size="sm" className="w-full font-bold shadow-xs bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
                                 <span>Enter Classroom</span>
                                 <ArrowRight className="w-4 h-4 ml-1.5" />
                               </Button>
@@ -962,7 +962,7 @@ function StudentDashboardContent() {
                               variant="outline"
                               size="sm"
                               onClick={() => openChannelDetails(channel, subItem?.teacher, subItem?.subscription, subItem?.progress)}
-                              className="p-2 border-[#E9DDF8] text-[#9333EA] hover:bg-[#F3E8FF] rounded-xl shrink-0 cursor-pointer"
+                              className="p-2 border-[#DCCFFF] text-[#6244A6] hover:bg-[#EEE8FF] rounded-xl shrink-0 cursor-pointer"
                               title="View detailed learning analytics & lesson breakdown"
                             >
                               <ArrowRight className="w-4 h-4" />
@@ -971,12 +971,12 @@ function StudentDashboardContent() {
                         ) : (
                           <>
                             <Link href={`/channels/${channel.id}`} className="flex-1">
-                              <Button variant="outline" size="sm" className="w-full font-semibold border-[#E9DDF8] text-[#17133A] hover:bg-[#F3E8FF] rounded-xl text-xs">
+                              <Button variant="outline" size="sm" className="w-full font-semibold border-[#DCCFFF] text-[#1E1035] hover:bg-[#EEE8FF] rounded-xl text-xs">
                                 View
                               </Button>
                             </Link>
                             <Link href={`/channels/${channel.id}?action=subscribe`} className="flex-1">
-                              <Button size="sm" className="w-full font-bold bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl text-xs shadow-xs">
+                              <Button size="sm" className="w-full font-bold bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl text-xs shadow-xs">
                                 Subscribe to Unlock
                               </Button>
                             </Link>
@@ -997,35 +997,35 @@ function StudentDashboardContent() {
         {currentTab === 'analysis' && (
           <div className="space-y-8">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[#9333EA] text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
                 <BarChart3 className="w-4 h-4" />
                 <span>Learning Analytics</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] font-display">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
                 Performance &amp; Analysis
               </h2>
-              <p className="text-xs sm:text-sm text-[#68647D]">
+              <p className="text-xs sm:text-sm text-[#5F5875]">
                 Detailed concept mastery, syllabus completion, and learning metrics.
               </p>
             </div>
 
             {!isSubscribed ? (
               /* PRE-SUBSCRIPTION: "Start Learning to See Analytics" */
-              <div className="border border-[#E9DDF8] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
-                <div className="w-16 h-16 rounded-3xl bg-[#F3E8FF] border border-[#E9DDF8] flex items-center justify-center mx-auto text-[#9333EA]">
+              <div className="border border-[#DCCFFF] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
+                <div className="w-16 h-16 rounded-3xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center mx-auto text-[#6244A6]">
                   <BarChart3 className="w-8 h-8" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-[#17133A] font-display">
+                  <h3 className="text-xl font-bold text-[#1E1035] font-display">
                     Start Learning to See Analytics
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#68647D] max-w-md mx-auto leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#5F5875] max-w-md mx-auto leading-relaxed">
                     Once you subscribe to a channel and begin watching lessons, your real completion percentage, concept mastery, and quiz accuracy will be tracked here.
                   </p>
                 </div>
                 <div className="pt-3">
                   <Link href="/student?tab=channels">
-                    <Button size="md" className="font-bold shadow-md bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
+                    <Button size="md" className="font-bold shadow-md bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
                       Find My Tutor
                     </Button>
                   </Link>
@@ -1036,54 +1036,54 @@ function StudentDashboardContent() {
               <div className="space-y-8">
                 {/* 6 TOP-LEVEL SUMMARY CARDS */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#68647D]">Channels</span>
-                      <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center">
+                      <span className="text-[11px] font-semibold text-[#5F5875]">Channels</span>
+                      <div className="w-7 h-7 rounded-lg bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center">
                         <Tv className="w-3.5 h-3.5" />
                       </div>
                     </div>
                     <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#17133A]">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
                         {subscriptions.length}
                       </span>
-                      <p className="text-[10px] text-[#68647D] mt-0.5">Enrolled</p>
+                      <p className="text-[10px] text-[#5F5875] mt-0.5">Enrolled</p>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#68647D]">Subjects</span>
+                      <span className="text-[11px] font-semibold text-[#5F5875]">Subjects</span>
                       <div className="w-7 h-7 rounded-lg bg-[#FCE7F3] text-[#DB2777] flex items-center justify-center">
                         <Award className="w-3.5 h-3.5" />
                       </div>
                     </div>
                     <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#17133A]">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
                         {subscribedSubjects.length}
                       </span>
                       <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Tracked</p>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#68647D]">Total Lessons</span>
+                      <span className="text-[11px] font-semibold text-[#5F5875]">Total Lessons</span>
                       <div className="w-7 h-7 rounded-lg bg-[#DBEAFE] text-[#2563EB] flex items-center justify-center">
                         <BookOpen className="w-3.5 h-3.5" />
                       </div>
                     </div>
                     <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#17133A]">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
                         {subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0)}
                       </span>
-                      <p className="text-[10px] text-[#68647D] mt-0.5">Units</p>
+                      <p className="text-[10px] text-[#5F5875] mt-0.5">Units</p>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#68647D]">Completed</span>
+                      <span className="text-[11px] font-semibold text-[#5F5875]">Completed</span>
                       <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                       </div>
@@ -1096,9 +1096,9 @@ function StudentDashboardContent() {
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#68647D]">Pending</span>
+                      <span className="text-[11px] font-semibold text-[#5F5875]">Pending</span>
                       <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                         <Clock className="w-3.5 h-3.5" />
                       </div>
@@ -1115,15 +1115,15 @@ function StudentDashboardContent() {
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-white shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#68647D]">Overall %</span>
-                      <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center">
+                      <span className="text-[11px] font-semibold text-[#5F5875]">Overall %</span>
+                      <div className="w-7 h-7 rounded-lg bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center">
                         <TrendingUp className="w-3.5 h-3.5" />
                       </div>
                     </div>
                     <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#9333EA]">
+                      <span className="text-xl sm:text-2xl font-extrabold text-[#6244A6]">
                         {(() => {
                           const tot = subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0);
                           const comp = subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0);
@@ -1138,13 +1138,13 @@ function StudentDashboardContent() {
                 {/* 3 VISUAL CHARTS: PIE/DONUT, BAR CHART, PROGRESS TREND LINE */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Chart 1: Donut Chart - Completed vs Pending */}
-                  <div className="bg-white border border-[#E9DDF8] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                  <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-[#17133A] font-display flex items-center gap-2">
-                        <PieChart className="w-4 h-4 text-[#9333EA]" />
+                      <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
+                        <PieChart className="w-4 h-4 text-[#6244A6]" />
                         <span>Completion Ratio</span>
                       </h3>
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA]">
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6]">
                         Donut Chart
                       </span>
                     </div>
@@ -1166,7 +1166,7 @@ function StudentDashboardContent() {
                                   cx="55"
                                   cy="55"
                                   r={r}
-                                  className="stroke-[#F3E8FF]"
+                                  className="stroke-[#EEE8FF]"
                                   strokeWidth="11"
                                   fill="transparent"
                                 />
@@ -1174,7 +1174,7 @@ function StudentDashboardContent() {
                                   cx="55"
                                   cy="55"
                                   r={r}
-                                  className="stroke-[#9333EA] transition-all duration-700 ease-out"
+                                  className="stroke-[#6244A6] transition-all duration-700 ease-out"
                                   strokeWidth="11"
                                   strokeDasharray={circ}
                                   strokeDashoffset={offset}
@@ -1183,10 +1183,10 @@ function StudentDashboardContent() {
                                 />
                               </svg>
                               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span className="text-2xl font-extrabold text-[#17133A] leading-none">
+                                <span className="text-2xl font-extrabold text-[#1E1035] leading-none">
                                   {pct}%
                                 </span>
-                                <span className="text-[10px] text-[#68647D] font-medium mt-1">Completed</span>
+                                <span className="text-[10px] text-[#5F5875] font-medium mt-1">Completed</span>
                               </div>
                             </>
                           );
@@ -1194,18 +1194,18 @@ function StudentDashboardContent() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-around text-xs pt-2 border-t border-[#E9DDF8]">
+                    <div className="flex items-center justify-around text-xs pt-2 border-t border-[#DCCFFF]">
                       <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#9333EA]" />
-                        <span className="text-[#68647D] font-medium">Done:</span>
-                        <span className="font-bold text-[#17133A]">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#6244A6]" />
+                        <span className="text-[#5F5875] font-medium">Done:</span>
+                        <span className="font-bold text-[#1E1035]">
                           {subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#E9DDF8]" />
-                        <span className="text-[#68647D] font-medium">Pending:</span>
-                        <span className="font-bold text-[#17133A]">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#DCCFFF]" />
+                        <span className="text-[#5F5875] font-medium">Pending:</span>
+                        <span className="font-bold text-[#1E1035]">
                           {Math.max(
                             0,
                             subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0) -
@@ -1217,13 +1217,13 @@ function StudentDashboardContent() {
                   </div>
 
                   {/* Chart 2: Subject-Wise Progress Bar Chart */}
-                  <div className="bg-white border border-[#E9DDF8] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                  <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-[#17133A] font-display flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-[#9333EA]" />
+                      <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-[#6244A6]" />
                         <span>Subject Mastery</span>
                       </h3>
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA]">
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6]">
                         Bar Chart
                       </span>
                     </div>
@@ -1239,14 +1239,14 @@ function StudentDashboardContent() {
                       ).map((subj, idx) => (
                         <div key={idx} className="space-y-1">
                           <div className="flex justify-between text-xs font-semibold">
-                            <span className="text-[#17133A] truncate max-w-[140px]">
+                            <span className="text-[#1E1035] truncate max-w-[140px]">
                               {subj.subjectName}
                             </span>
-                            <span className="text-[#9333EA] font-bold">{subj.percentage}%</span>
+                            <span className="text-[#6244A6] font-bold">{subj.percentage}%</span>
                           </div>
-                          <div className="w-full h-2.5 bg-[#F3E8FF] rounded-full overflow-hidden border border-[#E9DDF8]/60">
+                          <div className="w-full h-2.5 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]/60">
                             <div
-                              className="h-full bg-gradient-to-r from-[#C084FC] to-[#9333EA] rounded-full transition-all duration-500"
+                              className="h-full bg-gradient-to-r from-[#C084FC] to-[#6244A6] rounded-full transition-all duration-500"
                               style={{ width: `${Math.max(subj.percentage, 4)}%` }}
                             />
                           </div>
@@ -1254,16 +1254,16 @@ function StudentDashboardContent() {
                       ))}
                     </div>
 
-                    <p className="text-[11px] text-[#68647D] pt-2 border-t border-[#E9DDF8] text-center">
+                    <p className="text-[11px] text-[#5F5875] pt-2 border-t border-[#DCCFFF] text-center">
                       Calculated across all channel tests and lessons
                     </p>
                   </div>
 
                   {/* Chart 3: Weekly Progress Trend Line Graph */}
-                  <div className="bg-white border border-[#E9DDF8] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                  <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-[#17133A] font-display flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-[#9333EA]" />
+                      <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-[#6244A6]" />
                         <span>Pace &amp; Consistency</span>
                       </h3>
                       <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
@@ -1276,14 +1276,14 @@ function StudentDashboardContent() {
                       <svg className="w-full h-32 overflow-visible" viewBox="0 0 300 120">
                         <defs>
                           <linearGradient id="purpleTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#9333EA" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#9333EA" stopOpacity="0.0" />
+                            <stop offset="0%" stopColor="#6244A6" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#6244A6" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
                         {/* Grid lines */}
-                        <line x1="0" y1="30" x2="300" y2="30" stroke="#F3E8FF" strokeDasharray="3 3" />
-                        <line x1="0" y1="70" x2="300" y2="70" stroke="#F3E8FF" strokeDasharray="3 3" />
-                        <line x1="0" y1="110" x2="300" y2="110" stroke="#E9DDF8" />
+                        <line x1="0" y1="30" x2="300" y2="30" stroke="#EEE8FF" strokeDasharray="3 3" />
+                        <line x1="0" y1="70" x2="300" y2="70" stroke="#EEE8FF" strokeDasharray="3 3" />
+                        <line x1="0" y1="110" x2="300" y2="110" stroke="#DCCFFF" />
 
                         {/* Area Fill */}
                         <polygon
@@ -1294,30 +1294,30 @@ function StudentDashboardContent() {
                         <polyline
                           points="10,100 65,80 125,85 185,55 245,45 290,20"
                           fill="none"
-                          stroke="#9333EA"
+                          stroke="#6244A6"
                           strokeWidth="3.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
                         {/* Data dots */}
-                        <circle cx="10" cy="100" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="65" cy="80" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="125" cy="85" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="185" cy="55" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="245" cy="45" r="4" fill="#9333EA" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="290" cy="20" r="5" fill="#7E22CE" stroke="#FFFFFF" strokeWidth="2.5" />
+                        <circle cx="10" cy="100" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="65" cy="80" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="125" cy="85" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="185" cy="55" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="245" cy="45" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                        <circle cx="290" cy="20" r="5" fill="#4E338A" stroke="#FFFFFF" strokeWidth="2.5" />
                       </svg>
-                      <div className="flex justify-between text-[10px] text-[#68647D] font-medium pt-1">
+                      <div className="flex justify-between text-[10px] text-[#5F5875] font-medium pt-1">
                         <span>Wk 1</span>
                         <span>Wk 2</span>
                         <span>Wk 3</span>
                         <span>Wk 4</span>
                         <span>Wk 5</span>
-                        <span className="text-[#9333EA] font-bold">Current</span>
+                        <span className="text-[#6244A6] font-bold">Current</span>
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-emerald-600 font-medium pt-2 border-t border-[#E9DDF8] text-center flex items-center justify-center gap-1">
+                    <p className="text-[11px] text-emerald-600 font-medium pt-2 border-t border-[#DCCFFF] text-center flex items-center justify-center gap-1">
                       <TrendingUp className="w-3.5 h-3.5" />
                       <span>Consistent upward trend in study duration</span>
                     </p>
@@ -1340,6 +1340,7 @@ function StudentDashboardContent() {
         )}
         </main>
       )}
+      </div>
 
       {/* CHANNEL DETAILS OVERLAY */}
       <ChannelDetailsOverlay
@@ -1352,33 +1353,33 @@ function StudentDashboardContent() {
         studentId={studentId}
       />
 
-      {/* FOOTER */}
-      {currentTab !== 'home' && <PrepnxFooter />}
+      {/* FOOTER: Full-width edge-to-edge covering complete size (full sides and bottom) */}
+      <Footer />
 
       {/* ========================================================================= */}
       {/* MODAL 1: STUDENT PROFILE & ACADEMIC TIMELINE EDIT PANEL */}
       {/* ========================================================================= */}
       {isProfileOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white border border-[#E9DDF8] rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white border border-[#DCCFFF] rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-[#E9DDF8] flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-[#DCCFFF] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#F3E8FF] border border-[#E9DDF8] flex items-center justify-center text-[#9333EA]">
+                <div className="w-8 h-8 rounded-xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center text-[#6244A6]">
                   <User className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-extrabold text-[#17133A]">
+                  <h2 className="text-lg font-extrabold text-[#1E1035]">
                     Student Profile
                   </h2>
-                  <p className="text-xs text-[#68647D]">
+                  <p className="text-xs text-[#5F5875]">
                     Update personal &amp; academic study preferences
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsProfileOpen(false)}
-                className="p-1.5 rounded-lg text-[#68647D] hover:text-[#17133A]"
+                className="p-1.5 rounded-lg text-[#5F5875] hover:text-[#1E1035]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1400,8 +1401,8 @@ function StudentDashboardContent() {
               )}
 
               {/* Profile Photo (File Upload) */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border border-[#E9DDF8] bg-[#FAF9FF]">
-                <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-[#F3E8FF] border-2 border-[#9333EA]/40 flex items-center justify-center shrink-0">
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border border-[#DCCFFF] bg-[#F8F6FF]">
+                <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-[#EEE8FF] border-2 border-[#6244A6]/40 flex items-center justify-center shrink-0">
                   {photoPreview ? (
                     <Image
                       src={photoPreview}
@@ -1412,12 +1413,12 @@ function StudentDashboardContent() {
                       unoptimized
                     />
                   ) : (
-                    <User className="w-10 h-10 text-[#9333EA]" />
+                    <User className="w-10 h-10 text-[#6244A6]" />
                   )}
                 </div>
 
                 <div className="space-y-2 text-center sm:text-left flex-1">
-                  <div className="text-xs font-semibold text-[#17133A]">
+                  <div className="text-xs font-semibold text-[#1E1035]">
                     Profile Photo (File Upload)
                   </div>
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -1436,9 +1437,9 @@ function StudentDashboardContent() {
                       variant="outline"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs flex items-center gap-1.5 border-[#E9DDF8] text-[#17133A] hover:bg-[#FAF9FF] rounded-xl font-semibold"
+                      className="text-xs flex items-center gap-1.5 border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF] rounded-xl font-semibold"
                     >
-                      <Camera className="w-3.5 h-3.5 text-[#9333EA]" />
+                      <Camera className="w-3.5 h-3.5 text-[#6244A6]" />
                       {photoPreview ? 'Replace Photo' : 'Upload Photo'}
                     </Button>
                     {photoPreview && (
@@ -1454,7 +1455,7 @@ function StudentDashboardContent() {
                       </Button>
                     )}
                   </div>
-                  <p className="text-[11px] text-[#68647D]">
+                  <p className="text-[11px] text-[#5F5875]">
                     JPG, PNG or WEBP. Upload genuine profile picture.
                   </p>
                 </div>
@@ -1463,13 +1464,13 @@ function StudentDashboardContent() {
               {/* Editable Profile Fields */}
               <form id="student-profile-form" onSubmit={handleSaveProfile} className="space-y-4">
                 {/* Permanent Student ID (Cannot be changed) */}
-                <div className="flex flex-col gap-1.5 p-3.5 rounded-2xl border border-[#E9DDF8] bg-[#FAF9FF]">
+                <div className="flex flex-col gap-1.5 p-3.5 rounded-2xl border border-[#DCCFFF] bg-[#F8F6FF]">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="student-profile-id" className="text-xs font-bold text-[#17133A] flex items-center gap-1.5">
-                      <IdCard className="w-4 h-4 text-[#9333EA]" />
+                    <label htmlFor="student-profile-id" className="text-xs font-bold text-[#1E1035] flex items-center gap-1.5">
+                      <IdCard className="w-4 h-4 text-[#6244A6]" />
                       <span>Student ID</span>
                     </label>
-                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-white text-[#68647D] border-[#E9DDF8]">
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-white text-[#5F5875] border-[#DCCFFF]">
                       Cannot be changed
                     </Badge>
                   </div>
@@ -1481,7 +1482,7 @@ function StudentDashboardContent() {
                       disabled
                       readOnly
                       value={studentId || profile?.student_id_code || 'Loading ID...'}
-                      className="w-full px-3.5 py-2 text-sm font-mono font-bold tracking-wider rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] cursor-not-allowed select-all"
+                      className="w-full px-3.5 py-2 text-sm font-mono font-bold tracking-wider rounded-xl border border-[#DCCFFF] bg-white text-[#1E1035] cursor-not-allowed select-all"
                     />
                     <Button
                       type="button"
@@ -1489,7 +1490,7 @@ function StudentDashboardContent() {
                       size="sm"
                       onClick={handleCopyStudentId}
                       disabled={!studentId && !profile?.student_id_code}
-                      className="shrink-0 text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-xl border-[#E9DDF8] text-[#17133A] hover:bg-[#FAF9FF]"
+                      className="shrink-0 text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-xl border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF]"
                       title="Copy Student ID"
                     >
                       {copiedStudentId ? (
@@ -1499,13 +1500,13 @@ function StudentDashboardContent() {
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5 text-[#9333EA]" />
+                          <Copy className="w-3.5 h-3.5 text-[#6244A6]" />
                           <span>Copy</span>
                         </>
                       )}
                     </Button>
                   </div>
-                  <p className="text-[11px] text-[#68647D]">
+                  <p className="text-[11px] text-[#5F5875]">
                     Official permanent student identifier. It cannot be altered and is used by parents to connect.
                   </p>
                 </div>
@@ -1523,7 +1524,7 @@ function StudentDashboardContent() {
                 />
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="student-email" className="text-xs font-semibold text-[#68647D]">
+                  <label htmlFor="student-email" className="text-xs font-semibold text-[#5F5875]">
                     Email Address (Account Credential)
                   </label>
                   <input
@@ -1533,7 +1534,7 @@ function StudentDashboardContent() {
                     disabled
                     autoComplete="email"
                     value={profile?.email || ''}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-[#FAF9FF] text-[#68647D] cursor-not-allowed"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-[#DCCFFF] bg-[#F8F6FF] text-[#5F5875] cursor-not-allowed"
                   />
                 </div>
 
@@ -1562,7 +1563,7 @@ function StudentDashboardContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="student-class" className="text-xs font-semibold text-[#68647D]">
+                    <label htmlFor="student-class" className="text-xs font-semibold text-[#5F5875]">
                       Class
                     </label>
                     <select
@@ -1570,7 +1571,7 @@ function StudentDashboardContent() {
                       name="class"
                       value={editClassId}
                       onChange={(e) => setEditClassId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] focus:outline-none focus:ring-2 focus:ring-[#9333EA]/20 focus:border-[#9333EA]"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-[#DCCFFF] bg-white text-[#1E1035] focus:outline-none focus:ring-2 focus:ring-[#6244A6]/20 focus:border-[#6244A6]"
                     >
                       {allClasses.map((cls) => (
                         <option key={cls.id} value={cls.id}>
@@ -1581,7 +1582,7 @@ function StudentDashboardContent() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="student-board" className="text-xs font-semibold text-[#68647D]">
+                    <label htmlFor="student-board" className="text-xs font-semibold text-[#5F5875]">
                       Educational Board
                     </label>
                     <select
@@ -1589,7 +1590,7 @@ function StudentDashboardContent() {
                       name="board"
                       value={editBoardId}
                       onChange={(e) => setEditBoardId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] focus:outline-none focus:ring-2 focus:ring-[#9333EA]/20 focus:border-[#9333EA]"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-[#DCCFFF] bg-white text-[#1E1035] focus:outline-none focus:ring-2 focus:ring-[#6244A6]/20 focus:border-[#6244A6]"
                     >
                       {allBoards.map((b) => (
                         <option key={b.id} value={b.id}>
@@ -1602,22 +1603,22 @@ function StudentDashboardContent() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-[#68647D]">
+                    <label className="text-xs font-semibold text-[#5F5875]">
                       Subject of the Year (Multiple Selections Supported)
                     </label>
-                    <span className="text-[11px] text-[#68647D] font-medium">
+                    <span className="text-[11px] text-[#5F5875] font-medium">
                       {editSubjects.length} selected
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-[#E9DDF8] bg-[#FAF9FF] min-h-[42px] items-center">
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-[#DCCFFF] bg-[#F8F6FF] min-h-[42px] items-center">
                     {editSubjects.length === 0 ? (
-                      <span className="text-xs text-[#68647D] italic">No subjects selected. Click pills below to add.</span>
+                      <span className="text-xs text-[#5F5875] italic">No subjects selected. Click pills below to add.</span>
                     ) : (
                       editSubjects.map((subj) => (
                         <span
                           key={subj}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#F3E8FF] text-[#9333EA] border border-[#9333EA]/20"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#EEE8FF] text-[#6244A6] border border-[#6244A6]/20"
                         >
                           <span>{subj}</span>
                           <button
@@ -1632,7 +1633,7 @@ function StudentDashboardContent() {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 border border-[#E9DDF8] rounded-xl bg-white">
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 border border-[#DCCFFF] rounded-xl bg-white">
                     {ALL_RELEVANT_SUBJECTS.map((subj) => {
                       const isSelected = editSubjects.includes(subj);
                       return (
@@ -1642,8 +1643,8 @@ function StudentDashboardContent() {
                           onClick={() => toggleEditSubject(subj)}
                           className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
                             isSelected
-                              ? 'bg-[#9333EA] text-white border-[#9333EA] font-bold shadow-2xs'
-                              : 'bg-white text-[#68647D] border-[#E9DDF8] hover:border-[#9333EA]/40 hover:bg-[#FAF9FF]'
+                              ? 'bg-[#6244A6] text-white border-[#6244A6] font-bold shadow-2xs'
+                              : 'bg-white text-[#5F5875] border-[#DCCFFF] hover:border-[#6244A6]/40 hover:bg-[#F8F6FF]'
                           }`}
                         >
                           {isSelected ? `✓ ${subj}` : `+ ${subj}`}
@@ -1654,7 +1655,7 @@ function StudentDashboardContent() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="student-language" className="text-xs font-semibold text-[#68647D]">
+                  <label htmlFor="student-language" className="text-xs font-semibold text-[#5F5875]">
                     Preferred Study Language
                   </label>
                   <select
@@ -1662,7 +1663,7 @@ function StudentDashboardContent() {
                     name="language"
                     value={editLanguage}
                     onChange={(e) => setEditLanguage(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-[#E9DDF8] bg-white text-[#17133A] focus:outline-none focus:ring-2 focus:ring-[#9333EA]/20 focus:border-[#9333EA]"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-[#DCCFFF] bg-white text-[#1E1035] focus:outline-none focus:ring-2 focus:ring-[#6244A6]/20 focus:border-[#6244A6]"
                   >
                     {DEFAULT_LANGUAGES.map((lang) => (
                       <option key={lang} value={lang}>
@@ -1674,9 +1675,9 @@ function StudentDashboardContent() {
               </form>
 
               {/* Academic Timeline / History */}
-              <div className="p-4 rounded-2xl border border-[#E9DDF8] bg-[#FAF9FF] space-y-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#17133A]">
-                  <History className="w-3.5 h-3.5 text-[#9333EA]" />
+              <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-[#F8F6FF] space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#1E1035]">
+                  <History className="w-3.5 h-3.5 text-[#6244A6]" />
                   Academic History Timeline
                 </div>
                 {academicHistory.length > 0 ? (
@@ -1684,18 +1685,18 @@ function StudentDashboardContent() {
                     {academicHistory.map((h) => (
                       <div
                         key={h.id}
-                        className="flex items-center justify-between text-xs p-2.5 rounded-xl border border-[#E9DDF8] bg-white"
+                        className="flex items-center justify-between text-xs p-2.5 rounded-xl border border-[#DCCFFF] bg-white"
                       >
                         <div>
-                          <span className="font-bold text-[#17133A] mr-2">
+                          <span className="font-bold text-[#1E1035] mr-2">
                             {h.academic_year}
                           </span>
-                          <span className="text-[#68647D]">
+                          <span className="text-[#5F5875]">
                             {h.class?.name || 'Class'} • {h.board?.name || 'Board'} • {h.subject} ({h.preferred_language})
                           </span>
                         </div>
                         {h.is_current && (
-                          <Badge className="text-[10px] py-0.5 bg-[#F3E8FF] text-[#9333EA] font-bold border-0">
+                          <Badge className="text-[10px] py-0.5 bg-[#EEE8FF] text-[#6244A6] font-bold border-0">
                             Active
                           </Badge>
                         )}
@@ -1703,7 +1704,7 @@ function StudentDashboardContent() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-[#68647D]">
+                  <p className="text-xs text-[#5F5875]">
                     Current active academic context: 2026–27. Historical records will be retained year-by-year.
                   </p>
                 )}
@@ -1711,7 +1712,7 @@ function StudentDashboardContent() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-[#E9DDF8] bg-[#FAF9FF] flex items-center justify-between gap-3">
+            <div className="px-6 py-4 border-t border-[#DCCFFF] bg-[#F8F6FF] flex items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="ghost"
@@ -1729,7 +1730,7 @@ function StudentDashboardContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsProfileOpen(false)}
-                  className="border-[#E9DDF8] text-[#17133A] hover:bg-[#FAF9FF] rounded-xl font-semibold"
+                  className="border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF] rounded-xl font-semibold"
                 >
                   Cancel
                 </Button>
@@ -1738,7 +1739,7 @@ function StudentDashboardContent() {
                   form="student-profile-form"
                   size="sm"
                   isLoading={savingProfile}
-                  className="bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl font-bold shadow-xs px-4"
+                  className="bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl font-bold shadow-xs px-4"
                 >
                   Save Changes
                 </Button>
@@ -1755,9 +1756,9 @@ export default function StudentDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#FAF9FF] text-[#68647D]">
+        <div className="min-h-screen flex items-center justify-center bg-[#F8F6FF] text-[#5F5875]">
           <div className="text-center space-y-2">
-            <div className="w-8 h-8 border-2 border-[#9333EA] border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-8 h-8 border-2 border-[#6244A6] border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-xs font-medium">Loading Student Dashboard...</p>
           </div>
         </div>

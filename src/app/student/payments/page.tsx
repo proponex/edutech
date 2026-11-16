@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
-import { PrepnxFooter } from '@/components/student/PrepnxFooter';
+import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -46,7 +46,7 @@ export default function StudentPaymentsPage() {
     try {
       const res = await fetch('/api/student/payments');
       if (res.status === 401) {
-        router.push('/login');
+        router.push('/');
         return;
       }
       const data = await res.json();
@@ -84,27 +84,27 @@ export default function StudentPaymentsPage() {
   };
 
   return (
-    <div className="prepnx-student-theme min-h-screen flex flex-col bg-[#FAF9FF] text-[#17133A] font-sans">
+    <div className="prepnx-student-theme min-h-screen flex flex-col bg-[#F8F6FF] text-[#1E1035] font-sans">
       <Header />
 
       <main className="flex-1 w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-8 space-y-8">
         {/* Breadcrumb & Navigation */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-[#E9DDF8]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-[#DCCFFF]">
           <div>
             <Link
               href="/student"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#68647D] hover:text-[#9333EA] mb-2 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5F5875] hover:text-[#6244A6] mb-2 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Student Dashboard</span>
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#17133A] font-display flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1E1035] font-display flex items-center gap-2.5">
               <span>My Subscriptions &amp; Purchases</span>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-[#F3E8FF] text-[#9333EA] font-bold border border-[#E9DDF8]">
+              <span className="text-xs px-2.5 py-1 rounded-full bg-[#EEE8FF] text-[#6244A6] font-bold border border-[#DCCFFF]">
                 28-Day Cycle Access
               </span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#68647D] mt-1">
+            <p className="text-xs sm:text-sm text-[#5F5875] mt-1">
               Active channel access entitlements and transaction history verified by Razorpay.
             </p>
           </div>
@@ -114,9 +114,9 @@ export default function StudentPaymentsPage() {
             variant="outline"
             onClick={fetchPayments}
             disabled={loading}
-            className="flex items-center gap-1.5 self-start sm:self-center border-[#E9DDF8] bg-white hover:bg-[#F3E8FF] hover:border-[#9333EA]/40 text-[#68647D] hover:text-[#9333EA] rounded-xl font-medium shadow-2xs"
+            className="flex items-center gap-1.5 self-start sm:self-center border-[#DCCFFF] bg-white hover:bg-[#EEE8FF] hover:border-[#6244A6]/40 text-[#5F5875] hover:text-[#6244A6] rounded-xl font-medium shadow-2xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#9333EA]' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#6244A6]' : ''}`} />
             <span>Refresh</span>
           </Button>
         </div>
@@ -178,15 +178,15 @@ export default function StudentPaymentsPage() {
                         ? 'Expires Today'
                         : `Expires in ${days} Days`}
                     </span>
-                    <span className="text-xs text-[#68647D] font-medium">
+                    <span className="text-xs text-[#5F5875] font-medium">
                       Valid until: {expiryFormatted}
                     </span>
                   </div>
-                  <h3 className="text-lg font-extrabold text-[#17133A] truncate font-display">
+                  <h3 className="text-lg font-extrabold text-[#1E1035] truncate font-display">
                     {urgentSub.channel.name}
                     {urgentSub.subscription.subject_name ? ` • ${urgentSub.subscription.subject_name}` : ''}
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#68647D] max-w-xl leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#5F5875] max-w-xl leading-relaxed">
                     {isExpired
                       ? 'Your 28-day cycle has expired. Complete payment now to reactivate instant streaming and quiz access.'
                       : 'Renew now to add 28 full days to your existing cycle. Early renewal never loses remaining days.'}
@@ -201,7 +201,7 @@ export default function StudentPaymentsPage() {
                     className={`font-extrabold px-6 py-2.5 rounded-xl shadow-md text-white cursor-pointer ${
                       isExpired
                         ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
-                        : 'bg-[#9333EA] hover:bg-[#7E22CE] shadow-purple-600/20'
+                        : 'bg-[#6244A6] hover:bg-[#7E22CE] shadow-purple-600/20'
                     }`}
                   >
                     <span>{isExpired ? 'Pay Now & Reactivate' : 'Renew Now (+28 Days)'}</span>
@@ -219,13 +219,13 @@ export default function StudentPaymentsPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-[#17133A] font-display flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-extrabold text-[#1E1035] font-display flex items-center gap-2">
                 <span>Active Subscriptions</span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8]">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
                   {subscriptions.length}
                 </span>
               </h2>
-              <p className="text-xs text-[#68647D]">
+              <p className="text-xs text-[#5F5875]">
                 Each subject or channel subscription remains active for 28 days from payment date.
               </p>
             </div>
@@ -233,7 +233,7 @@ export default function StudentPaymentsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs font-semibold border-[#E9DDF8] hover:bg-[#F3E8FF] hover:border-[#9333EA] text-[#9333EA] rounded-xl"
+                className="text-xs font-semibold border-[#DCCFFF] hover:bg-[#EEE8FF] hover:border-[#6244A6] text-[#6244A6] rounded-xl"
               >
                 Browse All Channels
               </Button>
@@ -243,16 +243,16 @@ export default function StudentPaymentsPage() {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-56 bg-white border border-[#E9DDF8] rounded-3xl p-6 animate-pulse space-y-4">
+                <div key={i} className="h-56 bg-white border border-[#DCCFFF] rounded-3xl p-6 animate-pulse space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 bg-[#F3E8FF] rounded-2xl" />
+                    <div className="w-14 h-14 bg-[#EEE8FF] rounded-2xl" />
                     <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-[#F3E8FF] rounded w-3/4" />
-                      <div className="h-3 bg-[#F3E8FF] rounded w-1/2" />
+                      <div className="h-4 bg-[#EEE8FF] rounded w-3/4" />
+                      <div className="h-3 bg-[#EEE8FF] rounded w-1/2" />
                     </div>
                   </div>
-                  <div className="h-2 bg-[#F3E8FF] rounded w-full" />
-                  <div className="h-9 bg-[#F3E8FF] rounded-xl w-full" />
+                  <div className="h-2 bg-[#EEE8FF] rounded w-full" />
+                  <div className="h-9 bg-[#EEE8FF] rounded-xl w-full" />
                 </div>
               ))}
             </div>
@@ -275,12 +275,12 @@ export default function StudentPaymentsPage() {
                 return (
                   <div
                     key={subscription.id}
-                    className="border border-[#E9DDF8] bg-white rounded-3xl p-6 shadow-xs hover:shadow-md hover:border-[#9333EA]/40 transition-all flex flex-col justify-between space-y-5"
+                    className="border border-[#DCCFFF] bg-white rounded-3xl p-6 shadow-xs hover:shadow-md hover:border-[#6244A6]/40 transition-all flex flex-col justify-between space-y-5"
                   >
                     <div className="space-y-4">
                       {/* Top Channel Header */}
                       <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#F3E8FF] border border-[#E9DDF8] shrink-0 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
                           {teacher?.photo_url || channel.photo_url ? (
                             <Image
                               src={teacher?.photo_url || channel.photo_url!}
@@ -291,13 +291,13 @@ export default function StudentPaymentsPage() {
                               unoptimized
                             />
                           ) : (
-                            <Tv className="w-8 h-8 text-[#9333EA]" />
+                            <Tv className="w-8 h-8 text-[#6244A6]" />
                           )}
                         </div>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8]">
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
                               {subscription.package_type ? subscription.package_type.replace(/_/g, ' ') : 'Full Channel'}
                             </span>
                             {isExpired ? (
@@ -316,10 +316,10 @@ export default function StudentPaymentsPage() {
                               </span>
                             )}
                           </div>
-                          <h3 className="text-base font-extrabold text-[#17133A] truncate">
+                          <h3 className="text-base font-extrabold text-[#1E1035] truncate">
                             {channel.name}
                           </h3>
-                          <p className="text-xs text-[#68647D] truncate mt-0.5">
+                          <p className="text-xs text-[#5F5875] truncate mt-0.5">
                             By {teacher?.name || 'Educator'}
                             {subscription.subject_name ? ` • ${subscription.subject_name}` : ''}
                           </p>
@@ -327,18 +327,18 @@ export default function StudentPaymentsPage() {
                       </div>
 
                       {/* Expiry Details Box */}
-                      <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#E9DDF8] space-y-1.5">
+                      <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-[#68647D] font-medium flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-[#9333EA]" />
+                          <span className="text-[#5F5875] font-medium flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#6244A6]" />
                             <span>Validity:</span>
                           </span>
-                          <span className="font-bold text-[#17133A]">
+                          <span className="font-bold text-[#1E1035]">
                             {expiryDateFormatted}
                           </span>
                         </div>
                         {daysLeft !== null && daysLeft >= 0 && (
-                          <div className="text-[11px] text-right text-[#9333EA] font-semibold">
+                          <div className="text-[11px] text-right text-[#6244A6] font-semibold">
                             {daysLeft === 0 ? 'Expires today' : `${daysLeft} days remaining in cycle`}
                           </div>
                         )}
@@ -347,14 +347,14 @@ export default function StudentPaymentsPage() {
                       {/* Learning Progress */}
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-xs font-semibold">
-                          <span className="text-[#68647D]">Syllabus Progress</span>
-                          <span className="text-[#9333EA] font-bold">
+                          <span className="text-[#5F5875]">Syllabus Progress</span>
+                          <span className="text-[#6244A6] font-bold">
                             {progress?.percentage || 0}%
                           </span>
                         </div>
-                        <div className="w-full h-2 bg-[#F3E8FF] rounded-full overflow-hidden border border-[#E9DDF8]">
+                        <div className="w-full h-2 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]">
                           <div
-                            className="h-full bg-[#9333EA] rounded-full transition-all duration-300"
+                            className="h-full bg-[#6244A6] rounded-full transition-all duration-300"
                             style={{ width: `${Math.max(progress?.percentage || 0, 3)}%` }}
                           />
                         </div>
@@ -362,11 +362,11 @@ export default function StudentPaymentsPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="pt-3 border-t border-[#E9DDF8] flex items-center gap-2.5">
+                    <div className="pt-3 border-t border-[#DCCFFF] flex items-center gap-2.5">
                       <Link href={`/channels/${channel.id}`} className="flex-1">
                         <Button
                           size="sm"
-                          className="w-full font-bold shadow-xs bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl py-2"
+                          className="w-full font-bold shadow-xs bg-[#6244A6] hover:bg-[#7E22CE] text-white rounded-xl py-2"
                         >
                           <span>Enter Classroom</span>
                           <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
@@ -376,7 +376,7 @@ export default function StudentPaymentsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="font-semibold border-[#E9DDF8] text-[#9333EA] hover:bg-[#F3E8FF] rounded-xl px-3 py-2 text-xs"
+                          className="font-semibold border-[#DCCFFF] text-[#6244A6] hover:bg-[#EEE8FF] rounded-xl px-3 py-2 text-xs"
                           title="Renew or extend 28-day subscription"
                         >
                           Renew
@@ -388,21 +388,21 @@ export default function StudentPaymentsPage() {
               })}
             </div>
           ) : (
-            <div className="border border-[#E9DDF8] bg-white rounded-3xl p-12 text-center space-y-4 shadow-xs">
-              <div className="w-16 h-16 rounded-3xl bg-[#F3E8FF] text-[#9333EA] border border-[#E9DDF8] flex items-center justify-center mx-auto">
+            <div className="border border-[#DCCFFF] bg-white rounded-3xl p-12 text-center space-y-4 shadow-xs">
+              <div className="w-16 h-16 rounded-3xl bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF] flex items-center justify-center mx-auto">
                 <BookOpen className="w-8 h-8" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-[#17133A] font-display">
+                <h3 className="text-lg font-bold text-[#1E1035] font-display">
                   No Active Channel Subscriptions
                 </h3>
-                <p className="text-xs sm:text-sm text-[#68647D] max-w-md mx-auto leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#5F5875] max-w-md mx-auto leading-relaxed">
                   You do not have any active 28-day subscriptions yet. Browse teacher channels to unlock full subject chapters, study resources, and quizzes.
                 </p>
               </div>
               <div className="pt-2 flex justify-center gap-3">
                 <Link href="/student?tab=channels">
-                  <Button size="md" className="font-bold shadow-sm bg-[#9333EA] hover:bg-[#7E22CE] text-white rounded-xl">
+                  <Button size="md" className="font-bold shadow-sm bg-[#6244A6] hover:bg-[#7E22CE] text-white rounded-xl">
                     <Sparkles className="w-4 h-4 mr-2" />
                     Explore Channels
                   </Button>
@@ -415,29 +415,29 @@ export default function StudentPaymentsPage() {
         {/* ========================================================================= */}
         {/* SECTION 2: PURCHASE HISTORY & INVOICES TABLE                             */}
         {/* ========================================================================= */}
-        <div className="border border-[#E9DDF8] bg-white rounded-3xl overflow-hidden shadow-xs">
-          <div className="border-b border-[#E9DDF8] px-6 py-4.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="border border-[#DCCFFF] bg-white rounded-3xl overflow-hidden shadow-xs">
+          <div className="border-b border-[#DCCFFF] px-6 py-4.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center">
                 <Receipt className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-[#17133A] font-display">
+                <h3 className="text-base font-bold text-[#1E1035] font-display">
                   Purchases &amp; Invoices
                 </h3>
-                <p className="text-xs text-[#68647D]">
+                <p className="text-xs text-[#5F5875]">
                   Every payment is verified and cleared with an official Razorpay payment ID.
                 </p>
               </div>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#FAF9FF] border border-[#E9DDF8] text-[#68647D] self-start sm:self-auto">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#F8F6FF] border border-[#DCCFFF] text-[#5F5875] self-start sm:self-auto">
               {payments.length} {payments.length === 1 ? 'Record' : 'Records'}
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-[#F3E8FF]/60 text-[#68647D] text-[11px] uppercase tracking-wider font-bold border-b border-[#E9DDF8]">
+              <thead className="bg-[#EEE8FF]/60 text-[#5F5875] text-[11px] uppercase tracking-wider font-bold border-b border-[#DCCFFF]">
                 <tr>
                   <th className="py-3.5 px-5">Course / Item</th>
                   <th className="py-3.5 px-4">Package</th>
@@ -447,25 +447,25 @@ export default function StudentPaymentsPage() {
                   <th className="py-3.5 px-5">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E9DDF8]">
+              <tbody className="divide-y divide-[#DCCFFF]">
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td colSpan={6} className="py-4 px-5">
-                        <div className="h-6 bg-[#F3E8FF] rounded w-full" />
+                        <div className="h-6 bg-[#EEE8FF] rounded w-full" />
                       </td>
                     </tr>
                   ))
                 ) : payments.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-[#68647D]">
-                      <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40 text-[#9333EA]" />
-                      <p className="font-semibold text-sm text-[#17133A]">No payment records found</p>
-                      <p className="text-xs text-[#68647D] mt-1">
+                    <td colSpan={6} className="py-12 text-center text-[#5F5875]">
+                      <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40 text-[#6244A6]" />
+                      <p className="font-semibold text-sm text-[#1E1035]">No payment records found</p>
+                      <p className="text-xs text-[#5F5875] mt-1">
                         When you purchase a course or subscription package, the verified receipt will appear here.
                       </p>
                       <Link href="/student?tab=channels">
-                        <Button size="sm" variant="outline" className="mt-4 border-[#E9DDF8] hover:bg-[#F3E8FF] text-[#9333EA] rounded-xl font-medium">
+                        <Button size="sm" variant="outline" className="mt-4 border-[#DCCFFF] hover:bg-[#EEE8FF] text-[#6244A6] rounded-xl font-medium">
                           Browse Available Tutors
                         </Button>
                       </Link>
@@ -490,14 +490,14 @@ export default function StudentPaymentsPage() {
                     return (
                       <tr
                         key={p.id}
-                        className="hover:bg-[#FAF9FF] transition-colors"
+                        className="hover:bg-[#F8F6FF] transition-colors"
                       >
-                        <td className="py-4 px-5 font-semibold text-[#17133A]">
+                        <td className="py-4 px-5 font-semibold text-[#1E1035]">
                           <div className="flex items-center gap-2">
                             <span>{p.itemTitle}</span>
                             <Link
                               href={`/channels/${p.itemId}`}
-                              className="text-[#9333EA] hover:text-[#7E22CE]"
+                              className="text-[#6244A6] hover:text-[#7E22CE]"
                               title="View Course"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
@@ -505,17 +505,17 @@ export default function StudentPaymentsPage() {
                           </div>
                         </td>
 
-                        <td className="py-4 px-4 text-[#68647D] capitalize font-medium">
+                        <td className="py-4 px-4 text-[#5F5875] capitalize font-medium">
                           {p.packageType ? p.packageType.replace(/_/g, ' ') : 'Standard'}
                         </td>
 
-                        <td className="py-4 px-4 font-extrabold text-[#17133A]">
+                        <td className="py-4 px-4 font-extrabold text-[#1E1035]">
                           ₹{amountFormatted}
                         </td>
 
-                        <td className="py-4 px-4 font-mono text-[11px] text-[#68647D]">
-                          <div className="text-[#17133A] font-semibold">{p.razorpayPaymentId || 'N/A'}</div>
-                          <div className="text-[10px] text-[#68647D]/70">Ref: {p.orderId.slice(0, 14)}...</div>
+                        <td className="py-4 px-4 font-mono text-[11px] text-[#5F5875]">
+                          <div className="text-[#1E1035] font-semibold">{p.razorpayPaymentId || 'N/A'}</div>
+                          <div className="text-[10px] text-[#5F5875]/70">Ref: {p.orderId.slice(0, 14)}...</div>
                         </td>
 
                         <td className="py-4 px-4">
@@ -533,7 +533,7 @@ export default function StudentPaymentsPage() {
                           </span>
                         </td>
 
-                        <td className="py-4 px-5 text-[#68647D] whitespace-nowrap text-xs">
+                        <td className="py-4 px-5 text-[#5F5875] whitespace-nowrap text-xs">
                           {dateFormatted}
                         </td>
                       </tr>
@@ -546,7 +546,7 @@ export default function StudentPaymentsPage() {
         </div>
       </main>
 
-      <PrepnxFooter />
+      <Footer />
     </div>
   );
 }

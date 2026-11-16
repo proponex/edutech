@@ -9,18 +9,25 @@ import {
   GraduationCap,
   BookOpen,
   ArrowRight,
-  ChevronLeft,
   ChevronRight,
+  ChevronLeft,
   Atom,
   Calculator,
   Pencil,
   Book,
   Sprout,
-  Star,
+  Play,
+  Clock,
+  Sparkles,
+  Layers,
   CheckCircle2,
+  Star,
+  Award,
+  Compass,
+  Smile,
+  Sun,
 } from 'lucide-react';
 import { Profile, ChannelItem, ClassItem, BannerItem } from '@/types';
-import { PrepnxFooter } from '@/components/student/PrepnxFooter';
 
 interface PrepnxStudentHomeProps {
   profile: Profile | null;
@@ -28,6 +35,20 @@ interface PrepnxStudentHomeProps {
   allClasses: ClassItem[];
   onOpenProfile: () => void;
   onLogout: () => void;
+}
+
+interface WatchHistoryItem {
+  id: string; // videoId
+  title: string;
+  subject_name: string;
+  duration_seconds: number | null;
+  channel_id: string;
+  channel_name: string;
+  class_name: string;
+  thumbnail_url: string | null;
+  progress_percent: number;
+  watched_seconds?: number;
+  updated_at?: string;
 }
 
 const DEFAULT_BANNER: BannerItem = {
@@ -40,116 +61,53 @@ const DEFAULT_BANNER: BannerItem = {
   is_active: true,
 };
 
-const FILTER_PILLS = [
-  'Class 12',
-  'Class 11',
-  'Class 10',
-  'Class 9',
-  'Class 8',
-  'Class 7',
-  'Class 6',
-  'Class 1 – 5',
-  'LKG – UKG',
+export interface ClassCardItem {
+  id: string;
+  name: string; // "LKG", "UKG", "Class 1", ... "Class 12"
+  grade: string;
+  stage: string;
+  iconName: 'sun' | 'smile' | 'star' | 'book' | 'compass' | 'layers' | 'award' | 'cap';
+}
+
+export const SEPARATE_CLASSES: ClassCardItem[] = [
+  { id: 'lkg', name: 'LKG', grade: 'Pre-K', stage: 'Early Years', iconName: 'sun' },
+  { id: 'ukg', name: 'UKG', grade: 'Kindergarten', stage: 'Early Years', iconName: 'smile' },
+  { id: 'class-1', name: 'Class 1', grade: 'Grade 1', stage: 'Primary School', iconName: 'star' },
+  { id: 'class-2', name: 'Class 2', grade: 'Grade 2', stage: 'Primary School', iconName: 'star' },
+  { id: 'class-3', name: 'Class 3', grade: 'Grade 3', stage: 'Primary School', iconName: 'book' },
+  { id: 'class-4', name: 'Class 4', grade: 'Grade 4', stage: 'Primary School', iconName: 'book' },
+  { id: 'class-5', name: 'Class 5', grade: 'Grade 5', stage: 'Primary School', iconName: 'book' },
+  { id: 'class-6', name: 'Class 6', grade: 'Grade 6', stage: 'Middle School', iconName: 'compass' },
+  { id: 'class-7', name: 'Class 7', grade: 'Grade 7', stage: 'Middle School', iconName: 'compass' },
+  { id: 'class-8', name: 'Class 8', grade: 'Grade 8', stage: 'Middle School', iconName: 'layers' },
+  { id: 'class-9', name: 'Class 9', grade: 'Grade 9', stage: 'High School', iconName: 'award' },
+  { id: 'class-10', name: 'Class 10', grade: 'Grade 10', stage: 'Board Exams', iconName: 'award' },
+  { id: 'class-11', name: 'Class 11', grade: 'Grade 11', stage: 'Senior Secondary', iconName: 'cap' },
+  { id: 'class-12', name: 'Class 12', grade: 'Grade 12', stage: 'Higher Secondary', iconName: 'cap' },
 ];
 
-const STATIC_COURSE_CARDS = [
-  {
-    gradeName: 'Class 12',
-    subtitle: 'Grade 12',
-    icon: 'books',
-    color: 'purple',
-    bgLight: 'bg-[#F3E8FF] text-[#9333EA]',
-  },
-  {
-    gradeName: 'Class 11',
-    subtitle: 'Grade 11',
-    icon: 'book',
-    color: 'blue',
-    bgLight: 'bg-[#E5F0FF] text-[#2563EB]',
-  },
-  {
-    gradeName: 'Class 10',
-    subtitle: 'Grade 10',
-    icon: 'pencil',
-    color: 'pink',
-    bgLight: 'bg-[#FCE7F3] text-[#DB2777]',
-  },
-  {
-    gradeName: 'Class 9',
-    subtitle: 'Grade 9',
-    icon: 'calc',
-    color: 'purple',
-    bgLight: 'bg-[#F3E8FF] text-[#9333EA]',
-  },
-  {
-    gradeName: 'Class 8',
-    subtitle: 'Grade 8',
-    icon: 'atom',
-    color: 'blue',
-    bgLight: 'bg-[#E5F0FF] text-[#2563EB]',
-  },
-  {
-    gradeName: 'Class 7',
-    subtitle: 'Grade 7',
-    icon: 'plant',
-    color: 'pink',
-    bgLight: 'bg-[#FCE7F3] text-[#DB2777]',
-  },
-  {
-    gradeName: 'Class 6',
-    subtitle: 'Grade 6',
-    icon: 'books',
-    color: 'purple',
-    bgLight: 'bg-[#F3E8FF] text-[#9333EA]',
-  },
-  {
-    gradeName: 'Class 1 – 5',
-    subtitle: 'Primary Grades',
-    icon: 'pencil',
-    color: 'blue',
-    bgLight: 'bg-[#E5F0FF] text-[#2563EB]',
-  },
-  {
-    gradeName: 'LKG – UKG',
-    subtitle: 'Kindergarten',
-    icon: 'plant',
-    color: 'pink',
-    bgLight: 'bg-[#FCE7F3] text-[#DB2777]',
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    id: 1,
-    name: 'Aanya Sharma',
-    className: 'Class 12',
-    stars: 5,
-    quote:
-      'The classes are very clear and easy to understand. It really helped me improve my marks and understand tough concepts with confidence!',
-    avatar:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
-  },
-  {
-    id: 2,
-    name: 'Rohan Mehta',
-    className: 'Class 11',
-    stars: 5,
-    quote:
-      'Great explanations and practice tests. The platform is simple and very student-friendly with top quality chapter notes.',
-    avatar:
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=160&q=80',
-  },
-  {
-    id: 3,
-    name: 'Diya Nair',
-    className: 'Class 10',
-    stars: 5,
-    quote:
-      'All subjects in one place with quality content. Highly recommended for every student preparing for board exams!',
-    avatar:
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=160&q=80',
-  },
-];
+function renderClassIcon(iconName: string, isSelected: boolean) {
+  const iconClass = isSelected ? 'w-6 h-6 text-white stroke-[2.2]' : 'w-5 h-5 text-[#6244A6] stroke-[2]';
+  switch (iconName) {
+    case 'sun':
+      return <Sun className={iconClass} />;
+    case 'smile':
+      return <Smile className={iconClass} />;
+    case 'star':
+      return <Star className={iconClass} />;
+    case 'book':
+      return <BookOpen className={iconClass} />;
+    case 'compass':
+      return <Compass className={iconClass} />;
+    case 'layers':
+      return <Layers className={iconClass} />;
+    case 'award':
+      return <Award className={iconClass} />;
+    case 'cap':
+    default:
+      return <GraduationCap className={iconClass} />;
+  }
+}
 
 export function PrepnxStudentHome({
   profile,
@@ -161,23 +119,95 @@ export function PrepnxStudentHome({
   const router = useRouter();
   const supabase = createClient();
 
-  // Banners from Supabase database
+  // 1. Banners from Supabase database
   const [banners, setBanners] = useState<BannerItem[]>([DEFAULT_BANNER]);
   const [heroSlideIdx, setHeroSlideIdx] = useState(0);
   const [isHeroPaused, setIsHeroPaused] = useState(false);
 
-  // Channels loaded from Supabase
+  // 2. Channels loaded from Supabase
   const [channels, setChannels] = useState<ChannelItem[]>([]);
   const [selectedPill, setSelectedPill] = useState<string>('Class 12');
 
-  // Testimonials Carousel
-  const [testimonialIdx, setTestimonialIdx] = useState(0);
-  const [isTestimonialPaused, setIsTestimonialPaused] = useState(false);
+  // Semicircle Carousel Track Refs & Transforms State
+  const carouselTrackRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [cardTransforms, setCardTransforms] = useState<Record<string, { y: number; rot: number; scale: number }>>({});
 
-  // Horizontal scroll ref for course cards
-  const courseCardsRef = useRef<HTMLDivElement>(null);
+  const updateArcTransforms = useCallback(() => {
+    const track = carouselTrackRef.current;
+    if (!track) return;
+    const trackRect = track.getBoundingClientRect();
+    const centerX = trackRect.left + trackRect.width / 2;
+    const maxRadius = Math.max(trackRect.width * 0.44, 200);
 
-  // 1. Fetch active banners from Supabase
+    const newTransforms: Record<string, { y: number; rot: number; scale: number }> = {};
+
+    SEPARATE_CLASSES.forEach((cls) => {
+      const el = cardRefs.current[cls.id];
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const cardCenter = rect.left + rect.width / 2;
+      const offset = (cardCenter - centerX) / maxRadius;
+      const clamped = Math.max(-1.4, Math.min(1.4, offset));
+
+      // Semicircle arc formula: cards in the center crest upwards, while side cards curve down along the arc
+      const y = Math.min(38, Math.pow(clamped, 2) * 26);
+      const rot = clamped * 6.5;
+      const scale = Math.max(0.88, 1.05 - Math.abs(clamped) * 0.1);
+
+      newTransforms[cls.id] = { y, rot, scale };
+    });
+
+    setCardTransforms(newTransforms);
+  }, []);
+
+  useEffect(() => {
+    updateArcTransforms();
+    const handleResize = () => updateArcTransforms();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [updateArcTransforms]);
+
+  const handleTrackScroll = () => {
+    updateArcTransforms();
+  };
+
+  const scrollToCard = useCallback((id: string, smooth = true) => {
+    const track = carouselTrackRef.current;
+    const el = cardRefs.current[id];
+    if (track && el) {
+      const targetScroll = el.offsetLeft - track.offsetWidth / 2 + el.offsetWidth / 2;
+      track.scrollTo({ left: targetScroll, behavior: smooth ? 'smooth' : 'auto' });
+      setTimeout(updateArcTransforms, 180);
+    }
+  }, [updateArcTransforms]);
+
+  // Center selected card when selectedPill changes
+  useEffect(() => {
+    const item = SEPARATE_CLASSES.find((c) => c.name === selectedPill);
+    if (item) {
+      scrollToCard(item.id, true);
+    }
+  }, [selectedPill, scrollToCard]);
+
+  const handleScrollTrack = (direction: 'left' | 'right') => {
+    const track = carouselTrackRef.current;
+    if (track) {
+      track.scrollBy({ left: direction === 'left' ? -260 : 260, behavior: 'smooth' });
+      setTimeout(updateArcTransforms, 200);
+    }
+  };
+
+  const handleCardClick = (cls: ClassCardItem) => {
+    setSelectedPill(cls.name);
+    scrollToCard(cls.id, true);
+  };
+
+  // 3. Watch History State
+  const [lastWatched, setLastWatched] = useState<WatchHistoryItem | null>(null);
+  const [loadingWatchHistory, setLoadingWatchHistory] = useState(true);
+
+  // Fetch active banners from Supabase
   useEffect(() => {
     let ignore = false;
     async function loadBanners() {
@@ -201,7 +231,7 @@ export function PrepnxStudentHome({
     };
   }, [supabase]);
 
-  // 2. Load channels from Supabase
+  // Load channels from Supabase
   useEffect(() => {
     let ignore = false;
     async function loadChannels() {
@@ -224,7 +254,7 @@ export function PrepnxStudentHome({
     };
   }, [supabase]);
 
-  // 3. Hero Carousel auto-rotation (every 4 seconds, pauses on hover, only when slides.length > 1)
+  // Banner Carousel auto-rotation (every 4 seconds, pauses on hover, only when slides.length > 1)
   useEffect(() => {
     const slides = banners;
     if (slides.length <= 1 || isHeroPaused) return;
@@ -236,49 +266,90 @@ export function PrepnxStudentHome({
     return () => clearInterval(interval);
   }, [banners, isHeroPaused]);
 
-  // 4. Testimonials auto-rotation (every 4 seconds, pauses on hover)
+  // Load student watch history or latest video
   useEffect(() => {
-    if (isTestimonialPaused) return;
+    let ignore = false;
+    async function loadWatchHistory() {
+      try {
+        setLoadingWatchHistory(true);
 
-    const interval = setInterval(() => {
-      setTestimonialIdx((prev) => (prev + 1) % TESTIMONIALS.length);
-    }, 4000);
+        // 1. Check student_content_progress for the current student
+        if (studentId) {
+          const { data: progressData, error: pErr } = await supabase
+            .from('student_content_progress')
+            .select('content_id, channel_id, progress_percent, watched_seconds, updated_at')
+            .eq('student_id', studentId)
+            .eq('content_type', 'video')
+            .order('updated_at', { ascending: false })
+            .limit(1);
 
-    return () => clearInterval(interval);
-  }, [isTestimonialPaused]);
+          if (!ignore && !pErr && progressData && progressData.length > 0) {
+            const rec = progressData[0];
+            const { data: vData, error: vErr } = await supabase
+              .from('videos')
+              .select('id, title, subject_name, duration_seconds, channel_id, thumbnail_url, channel:channels(id, name, photo_url, class_id, class:classes(id, name))')
+              .eq('id', rec.content_id)
+              .maybeSingle();
 
-  // Scroll course cards carousel left/right
-  const scrollCourses = (direction: 'left' | 'right') => {
-    if (courseCardsRef.current) {
-      const scrollAmount = direction === 'left' ? -320 : 320;
-      courseCardsRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            if (!ignore && !vErr && vData) {
+              const ch = vData.channel as any;
+              setLastWatched({
+                id: vData.id,
+                title: vData.title,
+                subject_name: vData.subject_name || 'General Subject',
+                duration_seconds: vData.duration_seconds,
+                channel_id: vData.channel_id,
+                channel_name: ch?.name || 'Academic Channel',
+                class_name: ch?.class?.name || 'Class 12',
+                thumbnail_url: vData.thumbnail_url || ch?.photo_url || null,
+                progress_percent: rec.progress_percent || 0,
+                watched_seconds: rec.watched_seconds,
+                updated_at: rec.updated_at,
+              });
+              setLoadingWatchHistory(false);
+              return;
+            }
+          }
+        }
+
+        // 2. Fallback: If no previous progress recorded yet, fetch the latest published video
+        const { data: latestVideo, error: lErr } = await supabase
+          .from('videos')
+          .select('id, title, subject_name, duration_seconds, channel_id, thumbnail_url, created_at, channel:channels(id, name, photo_url, class_id, class:classes(id, name))')
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!ignore && !lErr && latestVideo) {
+          const ch = latestVideo.channel as any;
+          setLastWatched({
+            id: latestVideo.id,
+            title: latestVideo.title,
+            subject_name: latestVideo.subject_name || 'Mathematics',
+            duration_seconds: latestVideo.duration_seconds,
+            channel_id: latestVideo.channel_id,
+            channel_name: ch?.name || 'Academic Channel',
+            class_name: ch?.class?.name || 'Class 12',
+            thumbnail_url: latestVideo.thumbnail_url || ch?.photo_url || null,
+            progress_percent: 0,
+          });
+        }
+      } catch (err) {
+        console.error('Error loading watch history:', err);
+      } finally {
+        if (!ignore) setLoadingWatchHistory(false);
+      }
     }
-  };
 
-  // Helper: map pill name to matching channels or class ID
-  const getDestinationForClass = (className: string) => {
-    const matchedClass = allClasses.find((c) => {
-      if (className === 'LKG – UKG') {
-        return c.name.toLowerCase().includes('kindergarten') || c.name.toLowerCase().includes('kg');
-      }
-      if (className === 'Class 1 – 5') {
-        return c.name.toLowerCase().includes('class 1') || c.name.toLowerCase().includes('class 5');
-      }
-      return c.name.toLowerCase() === className.toLowerCase();
-    });
+    loadWatchHistory();
+    return () => {
+      ignore = true;
+    };
+  }, [studentId, supabase]);
 
-    if (matchedClass) {
-      const channelForClass = channels.find((ch) => ch.class_id === matchedClass.id);
-      if (channelForClass) {
-        return `/channels/${channelForClass.id}`;
-      }
-      return `/student?tab=channels&classId=${matchedClass.id}`;
-    }
-
-    return '/student?tab=channels';
-  };
-
-  const handleClassSelect = (className: string) => {
+  // Popular class click: Selects pill & smoothly scrolls to explore courses section
+  const handleSelectPopularClass = (className: string) => {
     setSelectedPill(className);
     const elem = document.getElementById('explore-courses');
     if (elem) {
@@ -286,117 +357,98 @@ export function PrepnxStudentHome({
     }
   };
 
-  const handleSelectPopularClass = (className: string) => {
-    const matchedClass = allClasses.find((c) => {
-      if (className === 'LKG – UKG') {
-        return c.name.toLowerCase().includes('kindergarten') || c.name.toLowerCase().includes('kg');
-      }
-      if (className === 'Class 1 – 5') {
-        return c.name.toLowerCase().includes('class 1') || c.name.toLowerCase().includes('class 5');
-      }
-      return c.name.toLowerCase() === className.toLowerCase();
-    });
+  // Filter channels strictly for the selected separate class
+  const filteredCoursesForPill = channels.filter((ch) => {
+    const chClassName = (ch.class?.name || '').toLowerCase().trim();
+    const chName = (ch.name || '').toLowerCase().trim();
+    const pill = selectedPill.toLowerCase().trim();
 
-    if (matchedClass) {
-      router.push(`/student?tab=channels&classId=${matchedClass.id}`);
-    } else {
-      router.push('/student?tab=channels');
+    // LKG
+    if (pill === 'lkg') {
+      return (
+        chClassName.includes('lkg') ||
+        chName.includes('lkg') ||
+        (chClassName.includes('kindergarten') && !chClassName.includes('ukg'))
+      );
     }
-  };
 
-  // Icon renderer helper
-  const renderCardIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'books':
-        return <BookOpen className="w-8 h-8" />;
-      case 'book':
-        return <Book className="w-8 h-8" />;
-      case 'pencil':
-        return <Pencil className="w-8 h-8" />;
-      case 'calc':
-        return <Calculator className="w-8 h-8" />;
-      case 'atom':
-        return <Atom className="w-8 h-8" />;
-      case 'plant':
-        return <Sprout className="w-8 h-8" />;
-      default:
-        return <GraduationCap className="w-8 h-8" />;
+    // UKG
+    if (pill === 'ukg') {
+      return (
+        chClassName.includes('ukg') ||
+        chName.includes('ukg')
+      );
     }
-  };
+
+    // Specific Class: e.g. "Class 1", "Class 2", ..., "Class 12"
+    const pillMatch = pill.match(/class\s*([0-9]+)/i);
+    if (pillMatch) {
+      const num = pillMatch[1];
+      const regex = new RegExp(`\\bclass\\s*${num}\\b|\\b${num}th\\b`, 'i');
+      return (
+        regex.test(chClassName) ||
+        regex.test(chName) ||
+        chClassName === `class ${num}`
+      );
+    }
+
+    return chClassName === pill || chName.includes(pill);
+  });
 
   const currentBanner = banners[heroSlideIdx] || DEFAULT_BANNER;
 
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return '0:43';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   return (
-    <div className="w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-6 sm:py-8 space-y-12 sm:space-y-16 text-[#17133A] font-sans">
+    <div className="w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-6 sm:py-8 space-y-10 sm:space-y-12 text-[#1E1035] font-sans">
       {/* ========================================================================= */}
-      {/* SECTION 2: HERO BANNER CAROUSEL (RESPONSIVE IMAGE CAROUSEL) */}
+      {/* SECTION 1: HERO BANNER (FULLY VISIBLE - NO OVERLAY WORDS)                 */}
       {/* ========================================================================= */}
       <section
         aria-label="Hero Promotion Banner"
         onMouseEnter={() => setIsHeroPaused(true)}
         onMouseLeave={() => setIsHeroPaused(false)}
-        className="relative rounded-[28px] sm:rounded-[36px] overflow-hidden bg-gradient-to-r from-[#F5EDFF] via-[#EDE3FF] to-[#FAF9FF] border border-[#E9DDF8] shadow-xs pb-16 sm:pb-20 md:pb-24 transition-all duration-300"
+        className="relative rounded-2xl sm:rounded-[32px] overflow-hidden bg-gradient-to-r from-[#F5EDFF] via-[#EEE8FF] to-[#FAF9FF] border border-[#DCCFFF]/80 shadow-md transition-all duration-300"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-6 p-6 sm:p-10 lg:p-12 relative z-10">
-          {/* Left Text & CTA */}
-          <div className="lg:col-span-7 space-y-4 sm:space-y-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-[#E9DDF8] text-[#9333EA] text-xs font-bold tracking-wide uppercase shadow-xs">
-              <span>Board &amp; Competitive Preparation</span>
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[50px] font-extrabold text-[#17133A] leading-[1.16] tracking-tight font-display">
-              {currentBanner.title || 'Learn • Practice • Achieve'}
-            </h1>
-
-            <p className="text-sm sm:text-base md:text-lg text-[#68647D] max-w-xl leading-relaxed">
-              {currentBanner.description ||
-                'Live Classes, Recorded Lessons, Tests & More for School and Competitive Exams.'}
-            </p>
-
-            <div className="pt-2">
-              <Link
-                href={currentBanner.button_link || '/student?tab=channels'}
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm sm:text-base font-bold text-white bg-[#9333EA] hover:bg-[#7E22CE] shadow-md shadow-purple-600/20 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 cursor-pointer"
-              >
-                <span>{currentBanner.button_text || 'Explore Channels'}</span>
-                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Right Banner Image with Student Graphic & Floating Badge */}
-          <div className="lg:col-span-5 relative flex items-center justify-center lg:justify-end">
-            <div className="absolute -top-10 -right-10 w-64 h-64 bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative w-full max-w-[360px] aspect-[4/3] sm:aspect-[4/5] rounded-3xl overflow-hidden shadow-xl border-4 border-white/90 bg-white">
+        {/* Full-width Responsive Banner Image */}
+        <div className="relative w-full aspect-[21/9] sm:aspect-[24/8] md:aspect-[3.2/1] min-h-[180px] sm:min-h-[220px] md:min-h-[280px] lg:min-h-[320px]">
+          {currentBanner.button_link ? (
+            <Link
+              href={currentBanner.button_link}
+              className="block w-full h-full relative cursor-pointer group"
+              title={currentBanner.title || 'Educational Banner'}
+            >
               <Image
                 src={currentBanner.image_url}
-                alt={currentBanner.title || 'Prepnx Learning Banner'}
+                alt={currentBanner.title || 'EduTech Learning Banner'}
                 fill
                 priority
-                sizes="(max-width: 1024px) 100vw, 360px"
-                className="w-full h-full object-cover object-center"
+                sizes="100vw"
+                className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.01]"
                 unoptimized
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-purple-950/20 via-transparent to-transparent pointer-events-none" />
-            </div>
-
-            {/* Floating Badge: Ace Your Exams */}
-            <div className="absolute -bottom-4 right-2 sm:right-6 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-lg border border-purple-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-xl shadow-xs">
-                🏆
-              </div>
-              <div>
-                <p className="text-[11px] text-[#68647D] font-medium leading-none">Ace Your</p>
-                <p className="text-sm font-bold text-[#17133A] mt-0.5">Exams</p>
-              </div>
-            </div>
-          </div>
+            </Link>
+          ) : (
+            <Image
+              src={currentBanner.image_url}
+              alt={currentBanner.title || 'EduTech Learning Banner'}
+              fill
+              priority
+              sizes="100vw"
+              className="w-full h-full object-cover object-center"
+              unoptimized
+            />
+          )}
         </div>
 
         {/* Carousel Indicator Dots (Visible when > 1 banner) */}
         {banners.length > 1 && (
-          <div className="flex items-center justify-center gap-2 pb-4 pt-2">
+          <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2 z-20">
             {banners.map((_, idx) => (
               <button
                 key={idx}
@@ -405,8 +457,8 @@ export function PrepnxStudentHome({
                 aria-label={`Banner slide ${idx + 1}`}
                 className={`transition-all duration-300 cursor-pointer ${
                   heroSlideIdx === idx
-                    ? 'w-7 h-2 rounded-full bg-[#9333EA] shadow-xs'
-                    : 'w-2.5 h-2 rounded-full bg-purple-300 hover:bg-purple-400'
+                    ? 'w-7 h-2 rounded-full bg-[#6244A6] shadow-sm'
+                    : 'w-2.5 h-2 rounded-full bg-white/70 hover:bg-white'
                 }`}
               />
             ))}
@@ -415,301 +467,448 @@ export function PrepnxStudentHome({
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 3: POPULAR CLASSES — OVERLAPS THE HERO BANNER (EXACTLY 2 ROWS)   */}
+      {/* SECTION 2: POPULAR CLASSES                                                */}
       {/* ========================================================================= */}
       <section
         aria-label="Popular Classes"
-        className="-mt-10 sm:-mt-14 md:-mt-16 relative z-20 max-w-4xl mx-auto w-full bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-purple-900/5 border border-[#E9DDF8]"
+        className="max-w-4xl mx-auto w-full bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-purple-900/5 border border-[#E9DDF8]"
       >
         <div className="flex flex-col gap-4 sm:gap-5">
           {/* Row 1: Heading */}
           <div className="flex items-center justify-between">
-            <h2 className="text-xl sm:text-2xl font-bold text-[#17133A] tracking-tight font-display flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#1E1035] tracking-tight font-display flex items-center gap-2">
               <span>Popular Classes</span>
-              <span className="text-sm font-normal text-[#9333EA]">✨</span>
+              <span className="text-sm font-normal text-[#6244A6]">✨</span>
             </h2>
             <Link
               href="/student?tab=channels"
-              className="text-xs font-bold text-[#9333EA] hover:text-[#7E22CE] flex items-center gap-1 group"
+              className="text-xs font-bold text-[#6244A6] hover:text-[#4E338A] flex items-center gap-1 group"
             >
               <span>View all classes</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
 
-          {/* Row 2: Exactly 3 Prominent Class Cards (Vedantu Style) */}
+          {/* Row 2: 3 Prominent Class Cards (Dark Theme Font in Default and Hover) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-            {/* Class 12: Lavender */}
+            {/* Class 12 */}
             <button
               type="button"
               onClick={() => handleSelectPopularClass('Class 12')}
-              className="group flex items-center justify-between px-5 py-4 rounded-2xl bg-[#F3E8FF] hover:bg-[#EBD5FF] border border-[#E9DDF8] transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 hover:shadow-xs"
+              className={`group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
+                selectedPill === 'Class 12'
+                  ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
+                  : 'bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
+              }`}
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-white/90 text-[#9333EA] flex items-center justify-center shadow-xs shrink-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
+                  selectedPill === 'Class 12' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#F8F6FF] text-[#6244A6]'
+                }`}>
                   <GraduationCap className="w-5 h-5" />
                 </div>
-                <span className="text-base sm:text-lg font-bold text-[#17133A]">Class 12</span>
+                <span className="text-base sm:text-lg font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 12</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-[#9333EA] group-hover:translate-x-1 transition-transform stroke-[2.5]" />
+              <ChevronRight className="w-5 h-5 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
             </button>
 
-            {/* Class 11: Minimal Light Blue */}
+            {/* Class 11 */}
             <button
               type="button"
               onClick={() => handleSelectPopularClass('Class 11')}
-              className="group flex items-center justify-between px-5 py-4 rounded-2xl bg-[#E5F0FF] hover:bg-[#D5E5FF] border border-[#D0E3FF] transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 hover:shadow-xs"
+              className={`group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
+                selectedPill === 'Class 11'
+                  ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
+                  : 'bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
+              }`}
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-white/90 text-[#2563EB] flex items-center justify-center shadow-xs shrink-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
+                  selectedPill === 'Class 11' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#F8F6FF] text-[#6244A6]'
+                }`}>
                   <BookOpen className="w-5 h-5" />
                 </div>
-                <span className="text-base sm:text-lg font-bold text-[#17133A]">Class 11</span>
+                <span className="text-base sm:text-lg font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 11</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-[#2563EB] group-hover:translate-x-1 transition-transform stroke-[2.5]" />
+              <ChevronRight className="w-5 h-5 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
             </button>
 
-            {/* Class 10: Soft Rose */}
+            {/* Class 10 */}
             <button
               type="button"
               onClick={() => handleSelectPopularClass('Class 10')}
-              className="group flex items-center justify-between px-5 py-4 rounded-2xl bg-[#FCE7F3] hover:bg-[#F9D2E8] border border-[#FBCFE8] transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 hover:shadow-xs"
+              className={`group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
+                selectedPill === 'Class 10'
+                  ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
+                  : 'bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
+              }`}
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-white/90 text-[#DB2777] flex items-center justify-center shadow-xs shrink-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
+                  selectedPill === 'Class 10' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#F8F6FF] text-[#6244A6]'
+                }`}>
                   <Atom className="w-5 h-5" />
                 </div>
-                <span className="text-base sm:text-lg font-bold text-[#17133A]">Class 10</span>
+                <span className="text-base sm:text-lg font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 10</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-[#DB2777] group-hover:translate-x-1 transition-transform stroke-[2.5]" />
+              <ChevronRight className="w-5 h-5 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
             </button>
           </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 4 & 5: EXPLORE COURSES (LKG – CLASS 12) + COURSE CAROUSEL */}
+      {/* SECTION 3: WATCH HISTORY / CONTINUE WATCHING                              */}
+      {/* (After Popular Classes & Before Explore Courses)                          */}
+      {/* ========================================================================= */}
+      {lastWatched && (
+        <section aria-label="Watch History" className="space-y-4 pt-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center shadow-2xs">
+                <Clock className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-[#1E1035] tracking-tight font-display">
+                  Continue Watching
+                </h2>
+                <p className="text-xs text-[#5F5875]">
+                  Pick up right where you left off in your learning journey
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href={`/channels/${lastWatched.channel_id}`}
+              className="text-xs font-bold text-[#6244A6] hover:text-[#4E338A] flex items-center gap-1 group"
+            >
+              <span>View Channel</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+
+          {/* Continue Watching Video Card */}
+          <div className="bg-gradient-to-r from-white via-[#F8F6FF] to-white rounded-3xl p-5 sm:p-6 border border-[#DCCFFF] shadow-md hover:shadow-xl transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-6 group">
+            {/* Left: Thumbnail & Play Preview */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 w-full md:w-auto">
+              <div className="relative w-full sm:w-56 aspect-video rounded-2xl overflow-hidden bg-gradient-to-tr from-[#EEE8FF] via-[#F4F0FF] to-[#DCCFFF] shrink-0 border border-[#DCCFFF] shadow-md flex items-center justify-center group-hover:shadow-lg transition-shadow">
+                {lastWatched.thumbnail_url ? (
+                  <Image
+                    src={lastWatched.thumbnail_url}
+                    alt={lastWatched.title}
+                    fill
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-3 text-[#1E1035]">
+                    <GraduationCap className="w-8 h-8 text-[#6244A6] mb-1" />
+                    <span className="text-[11px] font-black tracking-wider uppercase text-[#1E1035]">
+                      {lastWatched.subject_name}
+                    </span>
+                  </div>
+                )}
+
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 bg-violet-950/10 flex items-center justify-center backdrop-blur-[1px]">
+                  <div className="w-11 h-11 rounded-full bg-white text-[#1E1035] shadow-lg flex items-center justify-center group-hover:scale-110 group-hover:bg-[#EEE8FF] transition-all pl-0.5">
+                    <Play className="w-5 h-5 fill-[#1E1035] text-[#1E1035] group-hover:fill-[#130924] group-hover:text-[#130924]" />
+                  </div>
+                </div>
+
+                {/* Duration Badge (Dark Font Theme) */}
+                <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-white/95 border border-[#DCCFFF] text-[#1E1035] text-[10px] font-bold font-mono tracking-wide shadow-xs">
+                  {formatDuration(lastWatched.duration_seconds)}
+                </div>
+
+                {/* Progress bar on bottom edge */}
+                {lastWatched.progress_percent > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+                    <div
+                      className="h-full bg-[#8060CE]"
+                      style={{ width: `${Math.min(100, Math.max(5, lastWatched.progress_percent))}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Video Details */}
+              <div className="space-y-1.5 text-center sm:text-left w-full sm:w-auto">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF] uppercase tracking-wide">
+                    {lastWatched.subject_name}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#F4F0FF] text-[#3D1E6D] border border-[#DCCFFF]">
+                    {lastWatched.class_name}
+                  </span>
+                  {lastWatched.progress_percent > 0 && (
+                    <span className="text-[11px] font-semibold text-[#8060CE]">
+                      {lastWatched.progress_percent}% completed
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-base sm:text-lg font-bold text-[#1E1035] group-hover:text-[#6244A6] transition-colors leading-snug">
+                  {lastWatched.title}
+                </h3>
+
+                <p className="text-xs text-[#5F5875] font-medium flex items-center justify-center sm:justify-start gap-1.5">
+                  <span>Channel:</span>
+                  <span className="font-bold text-[#1E1035]">{lastWatched.channel_name}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Continue Button (Dark Font Theme) */}
+            <div className="shrink-0 w-full sm:w-auto flex justify-center sm:justify-end">
+              <Link
+                href={`/watch/video/${lastWatched.id}?channelId=${lastWatched.channel_id}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-full text-sm font-black text-[#1E1035] hover:text-[#130924] bg-gradient-to-r from-[#EEE8FF] via-[#E4D8FC] to-[#EEE8FF] hover:from-[#DCCFFF] hover:to-[#EEE8FF] border border-[#BBA5F0] shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5 cursor-pointer group/btn"
+              >
+                <Play className="w-4 h-4 fill-[#1E1035] text-[#1E1035] group-hover/btn:fill-[#130924] group-hover/btn:text-[#130924] transition-colors" />
+                <span>Continue</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION 4: EXPLORE COURSES (STRICT FILTER BY CLASS + EMPTY MESSAGE)       */}
       {/* ========================================================================= */}
       <section id="explore-courses" aria-label="Explore Courses by Grade" className="space-y-6 pt-2">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] tracking-tight font-display">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] tracking-tight font-display">
               Explore Courses (LKG – Class 12)
             </h2>
-            <p className="text-xs sm:text-sm text-[#68647D] font-medium mt-1">
+            <p className="text-xs sm:text-sm text-[#5F5875] font-medium mt-1">
               Select your academic standard to view syllabus and video channels
             </p>
           </div>
 
-          {/* Carousel Left/Right Controls on Desktop */}
-          <div className="hidden sm:flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => scrollCourses('left')}
-              className="w-9 h-9 rounded-full bg-white border border-[#E9DDF8] hover:bg-[#FAF9FF] hover:border-[#9333EA]/40 text-[#68647D] hover:text-[#9333EA] flex items-center justify-center transition-all cursor-pointer shadow-2xs"
-              aria-label="Scroll courses left"
-            >
-              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollCourses('right')}
-              className="w-9 h-9 rounded-full bg-[#9333EA] hover:bg-[#7E22CE] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
-              aria-label="Scroll courses right"
-            >
-              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-            </button>
-          </div>
-        </div>
-
-        {/* Clean Pill-Shaped Filter Bar */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {FILTER_PILLS.map((pill) => {
-            const isSelected = selectedPill === pill;
-            return (
-              <button
-                key={pill}
-                type="button"
-                onClick={() => setSelectedPill(pill)}
-                className={`px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer border ${
-                  isSelected
-                    ? 'bg-[#9333EA] text-white border-[#9333EA] shadow-xs font-bold'
-                    : 'bg-white text-[#68647D] hover:border-[#9333EA]/40 hover:bg-[#FAF9FF] border-[#E9DDF8]'
-                }`}
-              >
-                {pill}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Horizontal Course Cards Carousel */}
-        <div className="relative">
-          <div
-            ref={courseCardsRef}
-            className="flex items-stretch gap-4 sm:gap-5 overflow-x-auto pb-4 pt-1 scroll-smooth scrollbar-none"
+          <Link
+            href="/student?tab=channels"
+            className="text-xs font-bold text-[#6244A6] hover:text-[#130924] flex items-center gap-1 group self-start sm:self-auto transition-colors"
           >
-            {STATIC_COURSE_CARDS.map((card, idx) => {
-              const destination = getDestinationForClass(card.gradeName);
+            <span>Browse All Courses</span>
+            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
+
+        {/* Semicircle Class Cards Carousel Section */}
+        <div className="relative py-4 select-none">
+          {/* Subtle Ambient Dashed Semicircle Arc Line */}
+          <div className="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-44 border-t-2 border-dashed border-[#DCCFFF] rounded-[100%] pointer-events-none -z-10 opacity-70" />
+
+          {/* Floating Left Navigation Button */}
+          <button
+            type="button"
+            onClick={() => handleScrollTrack('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-[#DCCFFF] shadow-md shadow-[#1E1035]/10 flex items-center justify-center text-[#1E1035] hover:text-[#130924] hover:bg-[#EEE8FF] hover:border-[#6244A6] hover:scale-110 active:scale-95 transition-all cursor-pointer"
+            aria-label="Scroll left to previous classes"
+            title="Previous classes"
+          >
+            <ChevronLeft className="w-5 h-5 text-[#1E1035]" />
+          </button>
+
+          {/* Floating Right Navigation Button */}
+          <button
+            type="button"
+            onClick={() => handleScrollTrack('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md border border-[#DCCFFF] shadow-md shadow-[#1E1035]/10 flex items-center justify-center text-[#1E1035] hover:text-[#130924] hover:bg-[#EEE8FF] hover:border-[#6244A6] hover:scale-110 active:scale-95 transition-all cursor-pointer"
+            aria-label="Scroll right to next classes"
+            title="Next classes"
+          >
+            <ChevronRight className="w-5 h-5 text-[#1E1035]" />
+          </button>
+
+          {/* Semicircle Curved Scrolling Track */}
+          <div
+            ref={carouselTrackRef}
+            onScroll={handleTrackScroll}
+            className="flex items-center gap-4 sm:gap-6 overflow-x-auto scrollbar-none py-8 px-12 sm:px-16 scroll-smooth"
+            style={{ perspective: '1000px' }}
+          >
+            {SEPARATE_CLASSES.map((cls) => {
+              const isSelected = selectedPill === cls.name;
+              const transform = cardTransforms[cls.id] || { y: 0, rot: 0, scale: 1 };
 
               return (
                 <div
-                  key={idx}
-                  className="min-w-[170px] sm:min-w-[190px] max-w-[210px] flex-1 bg-white rounded-3xl p-5 border border-[#E9DDF8] flex flex-col items-center text-center transition-all duration-200 shadow-xs hover:shadow-lg hover:-translate-y-1 group shrink-0"
+                  key={cls.id}
+                  ref={(el) => {
+                    cardRefs.current[cls.id] = el;
+                  }}
+                  onClick={() => handleCardClick(cls)}
+                  className={`w-36 sm:w-44 h-48 sm:h-52 rounded-3xl p-4 sm:p-5 flex flex-col justify-between items-center text-center shrink-0 cursor-pointer transition-all duration-200 ${
+                    isSelected
+                      ? 'bg-gradient-to-b from-[#EEE8FF] to-[#DCCFFF] border-2 border-[#6244A6] shadow-xl shadow-[#6244A6]/20'
+                      : 'bg-white border border-[#DCCFFF] hover:border-[#6244A6] hover:bg-[#F8F6FF] shadow-xs hover:shadow-md'
+                  }`}
+                  style={{
+                    transform: `translate3d(0, ${transform.y}px, 0) rotate(${transform.rot}deg) scale(${transform.scale})`,
+                    transformOrigin: '50% 120%',
+                    transition: 'transform 0.12s ease-out, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                  }}
                 >
-                  {/* Educational Illustration Avatar */}
+                  {/* Top Icon Badge */}
                   <div
-                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl ${card.bgLight} flex items-center justify-center mb-4 transition-transform group-hover:scale-105 shadow-2xs`}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform ${
+                      isSelected
+                        ? 'bg-gradient-to-tr from-[#3D1E6D] to-[#6244A6] text-white shadow-md scale-105'
+                        : 'bg-[#EEE8FF] border border-[#DCCFFF] text-[#6244A6]'
+                    }`}
                   >
-                    {renderCardIcon(card.icon)}
+                    {renderClassIcon(cls.iconName, isSelected)}
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-bold text-[#17133A] font-display">
-                    {card.gradeName}
-                  </h3>
-                  <p className="text-xs text-[#68647D] font-medium mb-5">{card.subtitle}</p>
+                  {/* Class Title & Stage */}
+                  <div className="space-y-1">
+                    <h3 className={`font-display font-extrabold text-lg sm:text-xl tracking-tight ${isSelected ? 'text-[#130924]' : 'text-[#1E1035]'}`}>
+                      {cls.name}
+                    </h3>
+                    <p className={`text-[11px] font-semibold leading-tight ${isSelected ? 'text-[#6244A6]' : 'text-[#5F5875]'}`}>
+                      {cls.stage}
+                    </p>
+                  </div>
 
-                  <Link
-                    href={destination}
-                    className="w-full py-2 px-4 rounded-full text-xs font-bold text-white bg-[#9333EA] hover:bg-[#7E22CE] shadow-xs flex items-center justify-center gap-1.5 transition-all mt-auto cursor-pointer"
-                  >
-                    <span>View</span>
-                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  </Link>
+                  {/* Status Indicator */}
+                  <div className="pt-1">
+                    {isSelected ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black bg-[#6244A6] text-white shadow-xs tracking-wide">
+                        <CheckCircle2 className="w-3 h-3 text-white" />
+                        Selected
+                      </span>
+                    ) : (
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold text-[#6244A6] bg-[#EEE8FF] border border-[#DCCFFF]">
+                        {cls.grade}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-      </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 6: STUDENT TESTIMONIALS CAROUSEL */}
-      {/* ========================================================================= */}
-      <section
-        aria-label="Student Testimonials"
-        onMouseEnter={() => setIsTestimonialPaused(true)}
-        onMouseLeave={() => setIsTestimonialPaused(false)}
-        className="space-y-6 pt-2"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] tracking-tight font-display">
-              What Our Students Say
-            </h2>
-            <p className="text-xs sm:text-sm text-[#68647D] mt-1">
-              Real reviews from students excelling with Prepnx
-            </p>
+        {/* Course Cards Container: Shows ONLY That Class's Courses OR Clean Empty Message */}
+        {filteredCoursesForPill.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCoursesForPill.map((course) => {
+              return (
+                <div
+                  key={course.id}
+                  className="group relative bg-white rounded-3xl p-6 sm:p-7 border border-[#DCCFFF] hover:border-[#6244A6] shadow-sm hover:shadow-2xl hover:shadow-[#6244A6]/15 hover:-translate-y-2 transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                >
+                  {/* Top Animated Accent Border on Hover */}
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#6244A6] via-[#8060CE] to-[#A485E8] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                  <div className="space-y-4">
+                    {/* Header: Class Badge & Avatar Icon */}
+                    <div className="flex items-center justify-between">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#EEE8FF] to-[#F8F6FF] border border-[#DCCFFF] text-[#6244A6] flex items-center justify-center group-hover:scale-110 group-hover:shadow-md transition-all">
+                        {course.photo_url ? (
+                          <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                            <Image
+                              src={course.photo_url}
+                              alt={course.name}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <BookOpen className="w-7 h-7 text-[#6244A6]" />
+                        )}
+                      </div>
+
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#EEE8FF] text-[#1E1035] border border-[#DCCFFF]">
+                        {selectedPill}
+                      </span>
+                    </div>
+
+                    {/* Course Title & Description */}
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors font-display line-clamp-1">
+                        {course.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-[#5F5875] font-medium mt-1.5 line-clamp-2 leading-relaxed">
+                        {course.description ||
+                          'Comprehensive video lectures, chapter notes, and practice tests designed for academic excellence.'}
+                      </p>
+                    </div>
+
+                    {/* Feature Highlights */}
+                    <div className="flex items-center gap-3 pt-2 text-xs font-semibold text-[#5F5875]">
+                      <span className="flex items-center gap-1 text-[#6244A6]">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Full Syllabus
+                      </span>
+                      <span>&bull;</span>
+                      <span>HD Video Lessons</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Button (Dark Font Theme) */}
+                  <div className="pt-6">
+                    <Link
+                      href={`/channels/${course.id}`}
+                      className="w-full py-3 px-5 rounded-full text-xs sm:text-sm font-black text-[#1E1035] hover:text-[#130924] bg-gradient-to-r from-[#EEE8FF] via-[#E4D8FC] to-[#EEE8FF] hover:from-[#DCCFFF] hover:to-[#EEE8FF] border border-[#BBA5F0] hover:border-[#6244A6] shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer group/btn"
+                    >
+                      <span>Explore Course</span>
+                      <ArrowRight className="w-4 h-4 text-[#1E1035] group-hover/btn:text-[#130924] group-hover/btn:translate-x-1 transition-all stroke-[2.5]" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          {/* Testimonials Left/Right Arrows */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                setTestimonialIdx((prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)
-              }
-              className="w-9 h-9 rounded-full bg-white border border-[#E9DDF8] hover:bg-[#FAF9FF] hover:border-[#9333EA]/40 text-[#68647D] hover:text-[#9333EA] flex items-center justify-center transition-all cursor-pointer shadow-2xs"
-              aria-label="Previous testimonial"
-            >
-              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setTestimonialIdx((prev) => (prev + 1) % TESTIMONIALS.length)}
-              className="w-9 h-9 rounded-full bg-[#9333EA] hover:bg-[#7E22CE] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
-              aria-label="Next testimonial"
-            >
-              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-            </button>
-          </div>
-        </div>
-
-        {/* 3 Testimonial Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {TESTIMONIALS.map((t, idx) => {
-            const isHighlight = testimonialIdx === idx;
-
-            return (
-              <div
-                key={t.id}
-                className={`bg-white rounded-3xl p-6 border transition-all duration-200 flex flex-col justify-between space-y-4 hover:shadow-lg hover:-translate-y-1 ${
-                  isHighlight ? 'border-[#9333EA]/40 shadow-md ring-1 ring-[#9333EA]/20' : 'border-[#E9DDF8] shadow-xs'
-                }`}
+        ) : (
+          /* Empty state when NO courses exist for this class */
+          <div className="w-full bg-gradient-to-br from-[#FAF8FF] via-[#F5EEFF] to-[#FAF8FF] rounded-3xl p-10 sm:p-14 border border-dashed border-[#DCCFFF] text-center space-y-4 shadow-xs">
+            <div className="w-16 h-16 rounded-2xl bg-white border border-[#E9DDF8] text-[#8060CE] flex items-center justify-center mx-auto shadow-sm">
+              <BookOpen className="w-8 h-8 text-[#6244A6]" />
+            </div>
+            <div className="space-y-2 max-w-md mx-auto">
+              <h3 className="text-xl sm:text-2xl font-bold text-[#1E1035] font-display">
+                No courses currently available for {selectedPill}
+              </h3>
+              <p className="text-xs sm:text-sm text-[#5F5875] leading-relaxed">
+                Our master educators are actively preparing high-definition video lessons and test series for {selectedPill}. Please check back shortly or explore our other active channels.
+              </p>
+            </div>
+            <div className="pt-3">
+              <Link
+                href="/student?tab=channels"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs sm:text-sm font-black text-[#1E1035] hover:text-[#130924] bg-gradient-to-r from-[#EEE8FF] via-[#E4D8FC] to-[#EEE8FF] hover:from-[#DCCFFF] hover:to-[#EEE8FF] border border-[#BBA5F0] hover:border-[#6244A6] shadow-xs transition-all hover:scale-105 cursor-pointer group/btn"
               >
-                <div className="space-y-3">
-                  {/* 5 Gold Stars */}
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(t.stars)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-
-                  <p className="text-sm text-[#68647D] leading-relaxed italic">
-                    &ldquo;{t.quote}&rdquo;
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 pt-3 border-t border-[#E9DDF8]">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden border border-[#E9DDF8] bg-purple-50 shrink-0">
-                    <Image
-                      src={t.avatar}
-                      alt={t.name}
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-cover"
-                      unoptimized
-                    />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-[#17133A]">{t.name}</h4>
-                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F3E8FF] text-[#9333EA] mt-0.5">
-                      {t.className}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Indicator dots */}
-        <div className="flex items-center justify-center gap-2 pt-2">
-          {TESTIMONIALS.map((_, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => setTestimonialIdx(idx)}
-              aria-label={`Testimonial slide ${idx + 1}`}
-              className={`transition-all duration-300 cursor-pointer ${
-                testimonialIdx === idx
-                  ? 'w-6 h-2 rounded-full bg-[#9333EA]'
-                  : 'w-2 h-2 rounded-full bg-purple-200 hover:bg-purple-300'
-              }`}
-            />
-          ))}
-        </div>
+                <span>Browse All Active Channels</span>
+                <ArrowRight className="w-4 h-4 text-[#1E1035] group-hover/btn:text-[#130924] transition-colors" />
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ========================================================================= */}
-      {/* SECTION 7: LEARNING CTA BANNER */}
+      {/* SECTION 5: LEARNING CTA BANNER                                            */}
       {/* ========================================================================= */}
       <section
         aria-label="Start Learning Call to Action"
-        className="rounded-3xl sm:rounded-[32px] bg-gradient-to-r from-[#FAF9FF] via-[#F3E8FF] to-[#FAF5FF] border border-[#E9DDF8] p-7 sm:p-10 lg:p-12 shadow-xs"
+        className="rounded-3xl sm:rounded-[32px] bg-gradient-to-r from-[#FAF8FF] via-[#EEE8FF] to-[#FAF8FF] border border-[#DCCFFF] p-7 sm:p-10 lg:p-12 shadow-sm"
       >
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-6">
-            {/* 3D Stacked Books with Graduation Cap Graphic */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white border border-[#E9DDF8] text-[#9333EA] flex items-center justify-center shadow-sm shrink-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white border border-[#DCCFFF] text-[#6244A6] flex items-center justify-center shadow-sm shrink-0">
               <GraduationCap className="w-9 h-9" />
             </div>
 
             <div className="space-y-1.5 text-center md:text-left">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#17133A] tracking-tight font-display">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] tracking-tight font-display">
                 Start Your Learning Journey with Prepnx
               </h2>
-              <p className="text-xs sm:text-sm text-[#68647D] font-medium">
+              <p className="text-xs sm:text-sm text-[#5F5875] font-medium">
                 Expert teachers &bull; Structured courses &bull; Better results
               </p>
             </div>
@@ -718,19 +917,14 @@ export function PrepnxStudentHome({
           <div className="shrink-0 w-full md:w-auto">
             <Link
               href="/student?tab=channels"
-              className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-sm sm:text-base font-bold text-white bg-[#9333EA] hover:bg-[#7E22CE] shadow-md shadow-purple-600/20 hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-sm sm:text-base font-black text-[#1E1035] hover:text-[#130924] bg-gradient-to-r from-[#EEE8FF] via-[#E4D8FC] to-[#EEE8FF] hover:from-[#DCCFFF] hover:to-[#EEE8FF] border border-[#BBA5F0] hover:border-[#6244A6] shadow-md shadow-violet-700/15 hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer group/btn"
             >
               <span>Explore Courses</span>
-              <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+              <ArrowRight className="w-4 h-4 text-[#1E1035] group-hover/btn:text-[#130924] transition-colors stroke-[2.5]" />
             </Link>
           </div>
         </div>
       </section>
-
-      {/* ========================================================================= */}
-      {/* SECTION 8: PREPNX FOOTER */}
-      {/* ========================================================================= */}
-      <PrepnxFooter />
     </div>
   );
 }

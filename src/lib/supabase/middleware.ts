@@ -21,11 +21,16 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // The standalone /login page is completely removed; redirect directly to landing page ('/')
+  if (pathname === '/login') {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   const isAdminRoute = pathname.startsWith('/admin') && pathname !== '/admin/login';
   const isStudentRoute = pathname.startsWith('/student');
   const isParentRoute = pathname.startsWith('/parent');
   const isTeacherRoute = pathname.startsWith('/teacher');
-  const isAuthRoute = pathname === '/login' || pathname === '/signup' || pathname === '/admin/login';
+  const isAuthRoute = pathname === '/signup' || pathname === '/admin/login';
   const isProtectedRoute = isAdminRoute || isStudentRoute || isParentRoute || isTeacherRoute;
 
   // Check if any Supabase session cookies exist in the request
@@ -38,7 +43,7 @@ export async function updateSession(request: NextRequest) {
 
   // Optimization 1: If it's a protected route and has no auth cookies at all, redirect immediately (0ms)
   if (isProtectedRoute && !hasAuthCookie) {
-    const loginUrl = new URL(isAdminRoute ? '/admin/login' : '/login', request.url);
+    const loginUrl = new URL(isAdminRoute ? '/admin/login' : '/', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -85,7 +90,7 @@ export async function updateSession(request: NextRequest) {
   // Protected Routes Check
   if (isProtectedRoute) {
     if (!user) {
-      const loginUrl = new URL(isAdminRoute ? '/admin/login' : '/login', request.url);
+      const loginUrl = new URL(isAdminRoute ? '/admin/login' : '/', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -108,7 +113,7 @@ export async function updateSession(request: NextRequest) {
             ? '/parent'
             : role === 'teacher'
             ? '/teacher'
-            : '/login';
+            : '/';
         return NextResponse.redirect(new URL(target, request.url));
       }
 
@@ -118,7 +123,7 @@ export async function updateSession(request: NextRequest) {
             ? '/parent'
             : role === 'teacher'
             ? '/teacher'
-            : '/login';
+            : '/';
         return NextResponse.redirect(new URL(target, request.url));
       }
 
@@ -128,7 +133,7 @@ export async function updateSession(request: NextRequest) {
             ? '/student'
             : role === 'teacher'
             ? '/teacher'
-            : '/login';
+            : '/';
         return NextResponse.redirect(new URL(target, request.url));
       }
 
@@ -138,7 +143,7 @@ export async function updateSession(request: NextRequest) {
             ? '/student'
             : role === 'parent'
             ? '/parent'
-            : '/login';
+            : '/';
         return NextResponse.redirect(new URL(target, request.url));
       }
     } catch {

@@ -17,6 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { MuxVideoPlayer } from '@/components/shared/MuxVideoPlayer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -831,6 +832,7 @@ export default function VideoWatchPage() {
           )}
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

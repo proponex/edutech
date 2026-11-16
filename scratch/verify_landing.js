@@ -11,7 +11,7 @@ function fetchPage() {
 }
 
 async function runVerification() {
-  console.log('--- Starting EduTech Landing Page Full Reference Verification ---');
+  console.log('--- Starting EduTech Landing Page Requirements Verification ---');
   const { status, html } = await fetchPage();
   console.log(`HTTP Status: ${status}`);
 
@@ -20,40 +20,81 @@ async function runVerification() {
   }
 
   const checks = [
-    { name: 'Header: EDUTECH Brand & Digital Classroom', pattern: /EDUTECH/ },
-    { name: 'Header: Nav pill container', pattern: /bg-white\/80 py-2 px-6 rounded-full/ },
-    { name: 'Hero: 3D Stacked Books Floating asset (Transparent PNG)', pattern: /hero_books_transparent\.png/ },
-    { name: 'Hero: 3D Education Laptop Centerpiece (Transparent PNG)', pattern: /hero_laptop_transparent\.png/ },
-    { name: 'Hero: Class 12 Comprehensive Prep Card', pattern: /Class 12 Comprehensive Prep/ },
-    { name: 'Hero: 94% syllabus complete bar', pattern: /94% syllabus complete/ },
-    { name: 'Hero: 320+ HD Lessons', pattern: /320\+.*HD Lessons/s },
-    { name: 'Hero: 1,400+ Practices', pattern: /1,400\+.*Practices/s },
-    { name: 'Hero: 4.9★ Faculty Rating', pattern: /4\.9★.*Faculty Rating/s },
-    { name: 'Hero: Active wave animation on bottom divider', pattern: /animate-wave-flow/ },
-    { name: 'Login: Role switcher (Student, Parent, Teacher)', pattern: /Student.*Parent.*Teacher/s },
-    { name: 'Login: Email & Password Inputs', pattern: /id="hero-email".*id="hero-password"/s },
-    { name: 'Narrative Banner: Designed from the Ground Up', pattern: /Designed from the Ground Up for Real Academic Mastery/ },
-    { name: 'Narrative Banner: 3D Floating Laptop (Transparent PNG)', pattern: /centerpiece_narrative_transparent\.png/ },
-    { name: 'How It Works: 3D Educational Stepping Stones Journey texture', pattern: /AB6AXuDw7EVrhLkDo/ },
-    { name: 'How It Works: Animated Constellation dash flow', pattern: /animate-dash-flow/ },
-    { name: 'How It Works: Animated Constellation glowing nodes', pattern: /animate-node-glow/ },
-    { name: 'How It Works: Flowing wave divider', pattern: /animate-wave-flow-slow/ },
-    { name: 'How It Works: 4 Elevated Glass Cards', pattern: /bg-white\/95 backdrop-blur-xl border border-violet-300\/40/ },
-    { name: 'Student Experiences: 3D Pastel Study Desk (Transparent PNG)', pattern: /study_desk_transparent\.png/ },
-    { name: 'Student Experiences: Flowing wave divider', pattern: /animate-wave-flow-reverse/ },
-    { name: 'Features: Organic Lilac Topographical Pattern', pattern: /pattern-topographic/ },
-    { name: 'Features: HD Video Lessons with 3D Study Desk (Transparent PNG)', pattern: /Crystal-Clear HD Video Lessons/ },
-    { name: 'Features: Dedicated Parent Dashboard', pattern: /Dedicated Parent Dashboard/ },
-    { name: 'Features: Curriculum Coverage with 3D Books Accent', pattern: /Full School Curriculum Coverage/ },
-    { name: 'Features: Flowing wave divider into dark footer', pattern: /animate-wave-flow/ },
-    { name: 'Footer: 8k Fluid Waves Luxury Texture', pattern: /AB6AXuDuUU5e1L/ },
-    { name: 'Footer: Dark Violet Background (#130924)', pattern: /bg-\[#130924\]/ },
-    { name: 'Clean Content: No Mux branding', pattern: /^(?!.*Mux).*$/s },
+    // 1. Role switcher removal
+    {
+      name: 'Login Card: Role switcher pills (student/parent/teacher) removed',
+      test: () => !html.includes('capitalize px-3 py-1 rounded-lg transition-all cursor-pointer')
+    },
+    // 2. Banner cleanup
+    {
+      name: 'Banner: CBSE • ICSE • State Boards removed',
+      test: () => !html.includes('CBSE • ICSE • State Boards')
+    },
+    {
+      name: 'Banner: 4.9 / 5 Rating chip removed',
+      test: () => !html.includes('4.9 / 5 Rating')
+    },
+    {
+      name: 'Banner: Comprehensive K–12 Digital Learning chip removed',
+      test: () => !html.includes('Comprehensive K–12 Digital Learning')
+    },
+    // 3. Review page removal
+    {
+      name: 'Review Section: Hear from the Families We Serve completely removed',
+      test: () => !html.includes('Hear from the Families We Serve') && !html.includes('STUDENT &amp; PARENT STORIES')
+    },
+    {
+      name: 'Header & Footer: Student Experiences nav links removed',
+      test: () => !html.includes('href="/#experiences"') && !html.includes('href="#experiences"')
+    },
+    // 4. How It Works light theme & multiple dark violet waves
+    {
+      name: 'How It Works: Light theme background applied',
+      test: () => html.includes('bg-gradient-to-b from-[#F8F6FF] via-[#FAF8FF] to-[#F8F6FF]')
+    },
+    {
+      name: 'How It Works: Multiple dark violet waves beside the cards',
+      test: () => html.includes('MULTIPLE DARK VIOLET WAVES BESIDE THE CARDS') || (html.includes('fill="#1E1035"') && html.includes('fill="#2A174E"') && html.includes('fill="#3D1E6D"'))
+    },
+    {
+      name: 'How It Works: Bottom wording with tick logo removed from cards',
+      test: () => !html.includes('Quick Role-Based Setup') && !html.includes('Real-Time Progress Insights')
+    },
+    // 5. HD Video Lessons image
+    {
+      name: 'HD Video Lessons: Related theme image (hd_video_lesson_transparent.png) rendered',
+      test: () => html.includes('hd_video_lesson_transparent.png')
+    },
+    {
+      name: 'HD Video Lessons: Old study desk image removed from features card',
+      test: () => !html.includes('study_desk_transparent.png')
+    },
+    // 6. Core functionality intact
+    {
+      name: 'Header: Brand & Navigation intact',
+      test: () => html.includes('EDUTECH') && html.includes('How It Works') && html.includes('Features')
+    },
+    {
+      name: 'Hero: Login email & password inputs working',
+      test: () => html.includes('id="hero-email"') && html.includes('id="hero-password"')
+    },
+    {
+      name: 'Hero: 3D Centerpiece Laptop preserved',
+      test: () => html.includes('hero_laptop_transparent.png')
+    },
+    {
+      name: 'Hero: Class 12 Comprehensive Prep Card preserved',
+      test: () => html.includes('Class 12 Comprehensive Prep')
+    },
+    {
+      name: 'Footer: Dark luxury violet footer preserved',
+      test: () => html.includes('bg-[#130924]')
+    }
   ];
 
   let passed = 0;
   for (const check of checks) {
-    if (check.pattern.test(html)) {
+    if (check.test()) {
       console.log(`[PASS] ${check.name}`);
       passed++;
     } else {

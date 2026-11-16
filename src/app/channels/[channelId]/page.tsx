@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { openAuthModal } from '@/components/auth/auth-modal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -225,6 +226,16 @@ function ChannelDetailContent() {
         if (searchParams.get('action') === 'subscribe') {
           setIsPackageModalOpen(true);
         }
+
+        // Auto-play requested video if URL has ?video=[id] or ?videoId=[id]
+        const videoIdParam = searchParams.get('video') || searchParams.get('videoId');
+        if (videoIdParam && details?.videos) {
+          const targetVideo = details.videos.find((v) => v.id === videoIdParam);
+          if (targetVideo) {
+            setActivePlayableVideo(targetVideo);
+            setIsPlayingDemo(true);
+          }
+        }
       } catch (err) {
         console.error('Error loading channel details:', err);
       } finally {
@@ -305,7 +316,7 @@ function ChannelDetailContent() {
   // Handle Subscription Package Submission with Razorpay Checkout
   const handleConfirmPackageSelection = async () => {
     if (!currentUser) {
-      router.push('/login');
+      router.push('/');
       return;
     }
 
@@ -1539,6 +1550,7 @@ function ChannelDetailContent() {
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }

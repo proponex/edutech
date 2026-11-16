@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,7 +66,7 @@ function TeacherDashboardContent() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/login');
+          router.push('/');
           return;
         }
 
@@ -453,6 +454,8 @@ function TeacherDashboardContent() {
           <TeacherSubjectMonetization channels={channels} />
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }

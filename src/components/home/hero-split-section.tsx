@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Mail,
   UserCheck,
-  BookOpen,
 } from 'lucide-react';
 import { BannerItem, Profile } from '@/types';
 
@@ -22,6 +21,8 @@ const ASSETS = {
   heroBooksTopLeft: '/images/hero_books_transparent.png',
   heroLaptopCenterpiece: '/images/hero_laptop_transparent.png',
   centerpieceNarrative: '/images/centerpiece_narrative_transparent.png',
+  fluidWaveFooter:
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuDuUU5e1L-9DuaDwYBVAOd-qc-LUq0LAe14pE8tT7UNqvZFh-s3Zc-RWmzBqw2JHhj7RLIO-v4_Mv1XXigu9rHCnOVFr8xm9-dPyvhO7AgzzDIe4ybRzhasY0V5UTNmQdIlZr-QTxVPHLFRgv1JR0pXG599D8tEGiBhgWqa6Dk4gmz3V2AHkyOU6T7M3pwx02xq5xEVLPJX3TWKGkQEr96bgD-_0DjRRxVsnJ4NGEE',
 };
 
 export function HeroSplitSection() {
@@ -32,9 +33,6 @@ export function HeroSplitSection() {
   // Banner states
   const [banner, setBanner] = useState<BannerItem | null>(null);
   const [bannerLoading, setBannerLoading] = useState(true);
-
-  // Role selector state in login card
-  const [selectedRole, setSelectedRole] = useState<'student' | 'parent' | 'teacher'>('student');
 
   // Auth states
   const [email, setEmail] = useState('');
@@ -127,11 +125,11 @@ export function HeroSplitSection() {
       }
 
       switch (profile.role) {
-        case 'admin':   router.push('/admin');   break;
+        case 'admin': router.push('/admin'); break;
         case 'teacher': router.push('/teacher'); break;
-        case 'parent':  router.push('/parent');  break;
+        case 'parent': router.push('/parent'); break;
         case 'student': router.push('/student'); break;
-        default:        router.push('/');        break;
+        default: router.push('/'); break;
       }
       router.refresh();
     } catch (err: unknown) {
@@ -143,68 +141,178 @@ export function HeroSplitSection() {
 
   const getDashboardPath = (role?: string) => {
     switch (role) {
-      case 'admin':   return '/admin';
+      case 'admin': return '/admin';
       case 'teacher': return '/teacher';
-      case 'parent':  return '/parent';
+      case 'parent': return '/parent';
       case 'student': return '/student';
-      default:        return '/';
+      default: return '/';
     }
   };
 
   return (
     <>
       {/* =================================================================== */}
-      {/* 1. HERO SECTION                                                     */}
+      {/* 1. HERO SECTION WITH LUXURY FLUID WATER WAVES & NEAT WAVE PATTERNS   */}
       {/* =================================================================== */}
-      <section className="relative pt-6 pb-24 sm:pt-10 sm:pb-32 lg:pt-12 lg:pb-36 overflow-hidden bg-gradient-to-b from-[#F8F6FF] via-[#FAF8FF] to-white">
+      <section className="relative pt-8 pb-24 sm:pt-12 sm:pb-32 lg:pt-14 lg:pb-36 overflow-hidden bg-gradient-to-b from-[#F8F6FF] via-[#FAF8FF] to-white">
+        {/* Ambient Background Grid Pattern & Topographic Texture (Already Existing Pattern) */}
+        <div className="absolute inset-0 pattern-grid pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 pattern-topographic pointer-events-none opacity-25 z-0" />
+
         {/* Atmospheric Glowing Orbs */}
-        <div className="absolute top-10 left-10 w-96 h-96 bg-[#DCCFFF]/80 rounded-full blur-3xl opacity-75 pointer-events-none -z-10 animate-glow-pulse" />
-        <div className="absolute bottom-10 right-10 w-[520px] h-[520px] bg-[#EEE8FF] rounded-full blur-3xl opacity-70 pointer-events-none -z-10" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-[#EEE8FF]/50 to-transparent rounded-full blur-3xl pointer-events-none -z-10" />
+        <div className="absolute top-10 left-10 w-96 h-96 bg-[#DCCFFF]/80 rounded-full blur-3xl opacity-75 pointer-events-none z-0 animate-glow-pulse" />
+        <div className="absolute bottom-10 right-10 w-[520px] h-[520px] bg-[#EEE8FF] rounded-full blur-3xl opacity-70 pointer-events-none z-0" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-[#EEE8FF]/50 to-transparent rounded-full blur-3xl pointer-events-none z-0" />
 
-        {/* Floating 3D Accent Books (Real Rendered 3D Objects from DataStore) */}
-        <div className="absolute top-14 left-6 lg:left-14 w-20 sm:w-28 opacity-90 hover:opacity-100 transition-opacity pointer-events-none animate-float-slow select-none hidden sm:block z-20">
-          <Image
-            src={ASSETS.heroBooksTopLeft}
-            alt="3D Stacked Books"
-            width={120}
-            height={120}
-            className="w-full drop-shadow-2xl filter"
-            unoptimized
-          />
-        </div>
-        <div className="absolute bottom-24 right-8 lg:right-16 w-16 sm:w-24 opacity-80 hover:opacity-100 transition-opacity pointer-events-none animate-float-medium select-none hidden md:block z-20">
-          <Image
-            src={ASSETS.heroBooksTopLeft}
-            alt="3D Mini Stack"
-            width={100}
-            height={100}
-            className="w-full drop-shadow-2xl filter rotate-12"
-            unoptimized
-          />
+        {/* =============================================================== */}
+        {/* TOP DARK VIOLET WAVES & PATTERNS (FULLY VISIBLE AT TOP OF PAGE) */}
+        {/* =============================================================== */}
+        <div className="absolute top-0 left-0 right-0 h-64 sm:h-80 lg:h-96 pointer-events-none select-none overflow-hidden z-10">
+          <svg
+            className="w-full h-full"
+            fill="none"
+            preserveAspectRatio="none"
+            viewBox="0 0 1440 380"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <linearGradient id="heroDarkWaveGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#1E1035" stopOpacity="0.95" />
+                <stop offset="50%" stopColor="#2A174E" stopOpacity="0.92" />
+                <stop offset="100%" stopColor="#1E1035" stopOpacity="0.88" />
+              </linearGradient>
+              <linearGradient id="heroDarkWaveGrad2" x1="0%" y1="0%" x2="100%" y2="80%">
+                <stop offset="0%" stopColor="#2A174E" stopOpacity="0.92" />
+                <stop offset="50%" stopColor="#3D1E6D" stopOpacity="0.88" />
+                <stop offset="100%" stopColor="#2A174E" stopOpacity="0.84" />
+              </linearGradient>
+              <linearGradient id="heroDarkWaveGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#3D1E6D" stopOpacity="0.9" />
+                <stop offset="60%" stopColor="#4C268F" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#6244A6" stopOpacity="0.8" />
+              </linearGradient>
+              <linearGradient id="heroDarkWaveGrad4" x1="0%" y1="0%" x2="100%" y2="50%">
+                <stop offset="0%" stopColor="#6244A6" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#8060CE" stopOpacity="0.9" />
+              </linearGradient>
+              <filter id="paintDropGlowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#1E1035" floodOpacity="0.55" />
+              </filter>
+            </defs>
+
+            {/* Layer 1: Deep Dark Violet Base Wave (Starts top-left, curves across to right) */}
+            <path
+              d="M-40,0 L1480,0 L1480,210 C1240,320 980,160 740,270 C500,370 240,190 -40,290 Z"
+              fill="url(#heroDarkWaveGrad1)"
+              className="animate-wave-flow"
+            />
+
+            {/* Layer 2: Rich Violet Flow Wave */}
+            <path
+              d="M-40,0 L1480,0 L1480,165 C1200,275 940,120 680,225 C420,325 180,150 -40,240 Z"
+              fill="url(#heroDarkWaveGrad2)"
+              className="animate-wave-flow-slow"
+            />
+
+            {/* Layer 3: Accent Purple Crest Wave */}
+            <path
+              d="M-40,0 L1480,0 L1480,120 C1140,220 880,80 620,175 C360,265 120,100 -40,185 Z"
+              fill="url(#heroDarkWaveGrad3)"
+              className="animate-wave-flow-reverse"
+            />
+
+            {/* Layer 4: Bright Violet Highlight Ribbon */}
+            <path
+              d="M-40,0 L1480,0 L1480,75 C1080,160 820,45 560,130 C300,205 80,60 -40,125 Z"
+              fill="url(#heroDarkWaveGrad4)"
+            />
+
+            {/* Layer 5: Decorative Wave Contour Pattern Lines */}
+            <path
+              d="M-40,290 C240,190 500,370 740,270 C980,160 1240,320 1480,210"
+              fill="none"
+              stroke="#A485E8"
+              strokeWidth="2.5"
+              strokeOpacity="0.6"
+            />
+            <path
+              d="M-40,270 C240,170 500,350 740,250 C980,140 1240,300 1480,190"
+              fill="none"
+              stroke="#BBA5F0"
+              strokeWidth="2"
+              strokeDasharray="8 8"
+              strokeOpacity="0.55"
+              className="animate-dash-flow"
+            />
+            <path
+              d="M-40,245 C240,145 500,325 740,225 C980,115 1240,275 1480,165"
+              fill="none"
+              stroke="#DCCFFF"
+              strokeWidth="1.5"
+              strokeDasharray="4 6"
+              strokeOpacity="0.45"
+            />
+
+            {/* Layer 6: Hanging Paint Drops Pattern Along Bottom of Waves */}
+            {/* Paint Droplet 1 (Left Area) */}
+            <g filter="url(#paintDropGlowFilter)">
+              <path
+                d="M 280,230 C 272,242 268,252 268,260 C 268,272 277,282 289,282 C 301,282 310,272 310,260 C 310,252 306,242 298,230 Z"
+                fill="#2A174E"
+                stroke="#6244A6"
+                strokeWidth="1.5"
+              />
+              <circle cx="286" cy="256" r="3" fill="#DCCFFF" fillOpacity="0.7" />
+            </g>
+
+            {/* Paint Droplet 2 (Center Dip) */}
+            <g filter="url(#paintDropGlowFilter)">
+              <path
+                d="M 540,340 C 530,356 525,370 525,380 C 525,395 536,406 552,406 C 568,406 579,395 579,380 C 579,370 574,356 564,340 Z"
+                fill="#1E1035"
+                stroke="#8060CE"
+                strokeWidth="1.5"
+              />
+              <circle cx="548" cy="374" r="3.5" fill="#EEE8FF" fillOpacity="0.8" />
+            </g>
+
+            {/* Paint Droplet 3 (Right Center Area) */}
+            <g filter="url(#paintDropGlowFilter)">
+              <path
+                d="M 920,200 C 912,212 908,222 908,230 C 908,242 917,251 928,251 C 939,251 948,242 948,230 C 948,222 944,212 936,200 Z"
+                fill="#2A174E"
+                stroke="#6244A6"
+                strokeWidth="1.5"
+              />
+              <circle cx="925" cy="226" r="2.5" fill="#DCCFFF" fillOpacity="0.7" />
+            </g>
+
+            {/* Paint Droplet 4 (Far Right Area) */}
+            <g filter="url(#paintDropGlowFilter)">
+              <path
+                d="M 1260,280 C 1252,294 1247,305 1247,314 C 1247,327 1257,337 1270,337 C 1283,337 1293,327 1293,314 C 1293,305 1288,294 1280,280 Z"
+                fill="#1E1035"
+                stroke="#6244A6"
+                strokeWidth="1.5"
+              />
+              <circle cx="1267" cy="310" r="3" fill="#DCCFFF" fillOpacity="0.7" />
+            </g>
+          </svg>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
           <div className="grid grid-cols-1 lg:grid-cols-[11fr_9fr] gap-8 lg:gap-10 xl:gap-12 items-stretch">
 
             {/* =============================================================== */}
-            {/* LEFT COLUMN: Promotional Visual Banner with 3D Composition      */}
+            {/* LEFT COLUMN: Promotional Visual Banner                          */}
             {/* =============================================================== */}
-            <div className="relative min-h-[540px] sm:min-h-[600px] lg:min-h-[660px] rounded-3xl overflow-hidden shadow-2xl shadow-[#1E1035]/15 border border-[#DCCFFF] bg-gradient-to-br from-white via-[#F8F6FF] to-[#EEE8FF] flex flex-col justify-between group">
-              {/* Top Floating Badge Header */}
-              <div className="relative z-20 p-5 sm:p-7 flex items-center justify-between">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 backdrop-blur-md text-[#3D1E6D] text-xs sm:text-sm font-extrabold border border-[#DCCFFF] shadow-md shadow-violet-900/10">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#6244A6] animate-ping" />
-                  <span>CBSE • ICSE • State Boards</span>
-                </div>
-                <div className="hidden sm:inline-flex items-center gap-1.5 backdrop-blur-md bg-white/95 border border-[#DCCFFF] px-3.5 py-1.5 rounded-full text-xs font-bold text-[#1E1035] shadow-sm">
-                  <span className="text-amber-500">★</span>
-                  <span>4.9 / 5 Rating</span>
-                </div>
-              </div>
-
+            <div className="relative min-h-[540px] sm:min-h-[600px] lg:min-h-[660px] rounded-3xl overflow-hidden shadow-2xl shadow-[#1E1035]/15 border border-[#DCCFFF] bg-gradient-to-br from-white via-[#F8F6FF] to-[#EEE8FF] flex flex-col justify-between group pt-6 z-20">
               {/* Central Visual Composition */}
-              {banner?.image_url ? (
+              {bannerLoading ? (
+                <div className="relative flex-1 w-full min-h-[340px] flex items-center justify-center bg-gradient-to-br from-[#F8F6FF] to-[#EEE8FF]">
+                  <div className="w-8 h-8 rounded-full border-2 border-[#6244A6] border-t-transparent animate-spin" />
+                </div>
+              ) : banner?.image_url ? (
                 /* Admin published banner image */
                 <div className="relative flex-1 w-full min-h-[340px]">
                   <Image
@@ -219,89 +327,33 @@ export function HeroSplitSection() {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1E1035]/70 via-transparent to-transparent pointer-events-none" />
                 </div>
               ) : (
-                /* Default 3D Educational Centerpiece Illustration with 100% Transparent Background */
-                <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-2 sm:px-8">
-                  <div className="relative w-full max-w-[460px] sm:max-w-[500px] group-hover:scale-[1.02] transition-transform duration-500 ease-out">
-                    <Image
-                      src={ASSETS.heroLaptopCenterpiece}
-                      alt="Realistic 3D Education Laptop with Colorful Study Books & Alarm Clock"
-                      width={500}
-                      height={400}
-                      priority
-                      className="w-full h-auto object-contain drop-shadow-2xl animate-float-gentle filter contrast-[1.02]"
-                      unoptimized
-                    />
-                  </div>
-
-                  {/* Overlay Class 12 Comprehensive Prep Card */}
-                  <div className="w-full max-w-md glass-card p-5 sm:p-6 rounded-2xl border border-white/90 shadow-2xl shadow-violet-950/15 space-y-3.5 -mt-6 sm:-mt-10 relative z-20 ring-1 ring-[#DCCFFF]/60">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#3D1E6D] to-[#6244A6] text-white flex items-center justify-center font-display font-black text-xl shadow-md shadow-violet-900/30">
-                        12
-                      </div>
-                      <div>
-                        <h4 className="font-display font-black text-base sm:text-lg text-[#1E1035] tracking-tight">
-                          Class 12 Comprehensive Prep
-                        </h4>
-                        <p className="text-xs text-[#5F5875] font-medium">
-                          Board Examinations &amp; Competitive Focus
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex justify-between text-xs font-bold text-[#1E1035]">
-                        <span>Physics, Chemistry &amp; Math Modules</span>
-                        <span className="text-[#4C268F] font-extrabold">94% syllabus complete</span>
-                      </div>
-                      <div className="w-full h-2.5 rounded-full bg-[#EEE8FF] overflow-hidden p-0.5">
-                        <div className="w-[94%] h-full bg-gradient-to-r from-[#3D1E6D] via-[#6244A6] to-[#8060CE] rounded-full" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 pt-1 text-center text-xs">
-                      <div className="bg-[#F8F6FF]/95 p-2 rounded-xl border border-[#DCCFFF]/80 shadow-xs">
-                        <span className="block font-black text-sm text-[#3D1E6D]">320+</span>
-                        <span className="text-[11px] text-[#5F5875] font-semibold">HD Lessons</span>
-                      </div>
-                      <div className="bg-[#F8F6FF]/95 p-2 rounded-xl border border-[#DCCFFF]/80 shadow-xs">
-                        <span className="block font-black text-sm text-[#3D1E6D]">1,400+</span>
-                        <span className="text-[11px] text-[#5F5875] font-semibold">Practices</span>
-                      </div>
-                      <div className="bg-[#F8F6FF]/95 p-2 rounded-xl border border-[#DCCFFF]/80 shadow-xs">
-                        <span className="block font-black text-sm text-[#3D1E6D]">4.9★</span>
-                        <span className="text-[11px] text-[#5F5875] font-semibold">Faculty Rating</span>
-                      </div>
-                    </div>
-                  </div>
+                <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-[#F8F6FF] to-[#EEE8FF]">
+                  <h3 className="text-xl font-black text-[#1E1035]">Welcome to EduTech</h3>
+                  <p className="text-xs text-[#5F5875] mt-1 max-w-sm">
+                    Empowering K–12 learners with comprehensive digital classrooms.
+                  </p>
                 </div>
               )}
 
-              {/* Bottom Overlay Chips */}
-              <div className="relative z-20 p-5 sm:p-6 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-t from-white/95 to-transparent">
-                <div className="inline-flex items-center gap-2 backdrop-blur-md bg-[#1E1035]/90 text-white border border-[#DCCFFF]/30 px-4 py-2 rounded-xl text-xs font-bold shadow-md">
-                  <BookOpen className="w-3.5 h-3.5 text-[#BBA5F0]" />
-                  <span>Comprehensive K–12 Digital Learning</span>
-                </div>
                 {banner?.button_text && banner?.button_link ? (
-                  <Link
-                    href={banner.button_link}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#3D1E6D] to-[#6244A6] text-white text-xs font-bold shadow-md hover:scale-105 transition-all"
-                  >
-                    <span>{banner.button_text}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                ) : (
-                  <div className="sm:hidden inline-flex items-center gap-1.5 backdrop-blur-md bg-white border border-[#DCCFFF] px-3 py-1.5 rounded-xl text-xs font-bold text-[#1E1035] shadow-xs">
-                    <span className="text-amber-500">★</span>
-                    <span>4.9 / 5 Rating</span>
+                  <div className="relative z-20 p-5 sm:p-6 flex justify-end bg-gradient-to-t from-white/95 to-transparent">
+                    <Link
+                      href={banner.button_link}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#3D1E6D] to-[#6244A6] text-white text-xs font-bold shadow-md hover:scale-105 transition-all"
+                    >
+                      <span>{banner.button_text}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
+                ) : (
+                  <div className="pb-4" />
                 )}
               </div>
-            </div>
 
             {/* =============================================================== */}
             {/* RIGHT COLUMN: Premium Sign-in Card with Dark Violet Accents      */}
             {/* =============================================================== */}
-            <div className="flex flex-col justify-center">
+            <div className="flex flex-col justify-center relative z-20">
               <div
                 className="w-full bg-white rounded-3xl p-7 sm:p-9 lg:p-10 shadow-2xl shadow-violet-950/15 border border-[#DCCFFF] relative overflow-hidden"
                 id="hero-login"
@@ -312,24 +364,6 @@ export function HeroSplitSection() {
                 <div className="flex items-center justify-between mb-6">
                   <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] text-[#3D1E6D] flex items-center justify-center shadow-xs">
                     <GraduationCap className="w-6 h-6 text-[#3D1E6D]" />
-                  </div>
-
-                  {/* Role Switcher Pills */}
-                  <div className="inline-flex p-1 rounded-xl bg-[#F8F6FF] border border-[#DCCFFF]/80 text-[11px] font-bold text-[#5F5875]">
-                    {(['student', 'parent', 'teacher'] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setSelectedRole(r)}
-                        className={`capitalize px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                          selectedRole === r
-                            ? 'bg-[#3D1E6D] text-white shadow-xs'
-                            : 'hover:text-[#1E1035]'
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
                   </div>
                 </div>
 
@@ -429,12 +463,12 @@ export function HeroSplitSection() {
                           >
                             Password
                           </label>
-                          <Link
-                            href="/login"
+                          <a
+                            href="mailto:support@edutech.internal?subject=Password%20Reset%20Request"
                             className="text-xs font-bold text-[#4C268F] hover:text-[#3D1E6D] hover:underline"
                           >
                             Forgot password?
-                          </Link>
+                          </a>
                         </div>
                         <div className="relative">
                           <input
@@ -566,13 +600,13 @@ export function HeroSplitSection() {
               </div>
 
               <div className="lg:col-span-5 flex justify-center">
-                <div className="relative max-w-sm sm:max-w-md w-full">
+                <div className="relative max-w-sm sm:max-w-md w-full aspect-[512/307]">
                   <Image
                     src={ASSETS.centerpieceNarrative}
                     alt="3D Floating Laptop with Alphabet Book, Magnifier & Study Equipment"
-                    width={460}
-                    height={380}
-                    className="w-full h-auto object-contain drop-shadow-2xl animate-float-medium filter contrast-[1.02]"
+                    fill
+                    sizes="(max-width: 640px) 380px, 460px"
+                    className="object-contain drop-shadow-2xl animate-float-medium filter contrast-[1.02]"
                     unoptimized
                   />
                 </div>

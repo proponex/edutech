@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import MuxPlayer from '@mux/mux-player-react';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { LiveChatPanel } from '@/components/student/LiveChatPanel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,7 +90,7 @@ export default function LiveWatchPage() {
   // Get current user
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push('/'); return; }
       setCurrentUserId(user.id);
       supabase.from('profiles').select('name').eq('id', user.id).single()
         .then(({ data }) => setCurrentUserName(data?.name || 'Student'));
@@ -414,6 +415,7 @@ export default function LiveWatchPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

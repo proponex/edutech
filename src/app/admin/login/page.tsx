@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ShieldCheck, GraduationCap, AlertCircle, Lock, Mail } from 'lucide-react';
+import { Footer } from '@/components/layout/footer';
 
 function AdminLoginForm() {
   const router = useRouter();
@@ -173,7 +174,7 @@ function AdminLoginForm() {
           <CardFooter className="justify-center pb-6 text-xs text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-neutral-800 pt-4">
             <span>Are you an educator, student, or parent? </span>
             <Link
-              href="/login"
+              href="/"
               className="text-primary-700 dark:text-primary-400 hover:underline font-bold ml-1"
             >
               Public Login &rarr;
@@ -182,10 +183,8 @@ function AdminLoginForm() {
         </Card>
       </main>
 
-      {/* Footer Note */}
-      <footer className="py-4 text-center text-xs text-neutral-400">
-        Edutech Platform &bull; Secure Administrative Access
-      </footer>
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

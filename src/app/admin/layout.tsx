@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import { Footer } from '@/components/layout/footer';
 import {
   Wallet,
   BarChart3,
@@ -306,33 +307,46 @@ export default function AdminLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         {/* Top Navbar */}
-        <header className="h-16 px-4 sm:px-8 border-b border-neutral-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3">
+        <header className="h-16 px-4 sm:px-8 border-b border-[#DCCFFF] bg-[#EEE8FF]/95 backdrop-blur-md flex items-center justify-between sticky top-0 z-30 relative overflow-hidden text-[#1E1035] shadow-xs">
+          {/* Animated Fast-Moving Particles in Admin Top Navbar */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden select-none -z-10">
+            <div className="absolute -top-10 left-1/4 w-80 h-32 bg-[#BBA5F0]/25 rounded-full blur-2xl animate-glow-pulse" />
+            <div className="absolute -top-10 right-1/4 w-80 h-32 bg-[#DCCFFF]/35 rounded-full blur-2xl animate-glow-pulse" style={{ animationDelay: '2s' }} />
+
+            <div className="absolute top-3 left-[8%] w-2 h-2 rounded-full bg-[#8060CE] opacity-65 animate-particle-drift-right shadow-[0_0_8px_#8060CE]" />
+            <div className="absolute top-5 left-[25%] w-2 h-2 rounded-full bg-[#6244A6] opacity-75 animate-particle-fast-stream shadow-[0_0_12px_#6244A6]" />
+            <div className="absolute top-8 left-[45%] w-2.5 h-2.5 rounded-full bg-[#6244A6] opacity-60 animate-particle-drift-left shadow-[0_0_10px_#6244A6]" style={{ animationDelay: '1.2s' }} />
+            <div className="absolute top-4 left-[65%] w-2 h-2 rounded-full bg-[#8060CE] opacity-70 animate-particle-fast-stream shadow-[0_0_10px_#8060CE]" style={{ animationDelay: '0.8s' }} />
+            <div className="absolute top-7 left-[85%] w-1.5 h-1.5 rounded-full bg-[#4C268F] opacity-70 animate-particle-shimmer shadow-[0_0_8px_#4C268F]" style={{ animationDelay: '0.5s' }} />
+            <div className="absolute top-5 right-[18%] w-2 h-2 rounded-full bg-[#4C268F] opacity-70 animate-particle-fast-stream-rev shadow-[0_0_10px_#4C268F]" style={{ animationDelay: '0.4s' }} />
+          </div>
+
+          <div className="flex items-center gap-3 relative z-10">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 lg:hidden"
+              className="p-2 rounded-lg text-[#1E1035] hover:bg-[#DCCFFF] lg:hidden transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-              <span className="font-semibold text-primary-700 dark:text-primary-400">Admin</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-              <span className="capitalize text-neutral-900 dark:text-white font-medium">
+            <div className="flex items-center gap-2 text-xs text-[#5F5875]">
+              <span className="font-bold text-[#6244A6]">Admin</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#5F5875]" />
+              <span className="capitalize text-[#1E1035] font-bold">
                 {currentSection}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-50 dark:bg-primary-950/50 border border-primary-200 dark:border-primary-800 text-[11px] font-medium text-primary-800 dark:text-primary-300">
-              <Sparkles className="w-3 h-3 text-primary-600 animate-pulse" />
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-[11px] font-bold text-[#1E1035] border border-[#DCCFFF] shadow-xs">
+              <Sparkles className="w-3 h-3 text-[#6244A6] animate-pulse" />
               <span>Financial Ledger Active</span>
             </div>
             <Link
               href="/"
               target="_blank"
-              className="text-xs font-medium text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400 transition-colors hidden sm:flex items-center gap-1"
+              className="text-xs font-bold text-[#1E1035] hover:text-[#6244A6] transition-colors hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-white/60"
             >
               <span>View Portal</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -345,6 +359,8 @@ export default function AdminLayout({
         <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
+
+        <Footer />
       </div>
     </div>
   );

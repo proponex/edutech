@@ -298,6 +298,124 @@ h1, h2, h3, h4, h5, h6 {
   50%       { transform: scale(1.4); filter: drop-shadow(0 0 8px #BBA5F0); opacity: 1; }
 }
 
+@keyframes particleDriftRight {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.85);
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate3d(140px, -14px, 0) scale(1.3);
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(260px, 0, 0) scale(0.85);
+    opacity: 0.3;
+  }
+}
+
+@keyframes particleDriftLeft {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.9);
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate3d(-130px, 14px, 0) scale(1.35);
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(-240px, 0, 0) scale(0.9);
+    opacity: 0.3;
+  }
+}
+
+@keyframes particleFastStream {
+  0% {
+    transform: translate3d(-60px, 0, 0) scale(0.7);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate3d(180px, -12px, 0) scale(1.3);
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(420px, 8px, 0) scale(0.7);
+    opacity: 0;
+  }
+}
+
+@keyframes particleFastStreamReverse {
+  0% {
+    transform: translate3d(60px, 0, 0) scale(0.7);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate3d(-180px, 12px, 0) scale(1.3);
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(-420px, -8px, 0) scale(0.7);
+    opacity: 0;
+  }
+}
+
+@keyframes particleShimmer {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.85) translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5) translateY(-8px);
+    filter: drop-shadow(0 0 6px #8060CE);
+  }
+}
+
+@keyframes paintDripGently {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.92;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+}
+
+@keyframes paintDropGlow {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(26, 7, 51, 0.45));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 4px 10px rgba(98, 68, 166, 0.65));
+  }
+}
+
 .animate-float-slow          { animation: floatSlow 7s ease-in-out infinite; }
 .animate-float-medium        { animation: floatMed 5s ease-in-out infinite; }
 .animate-float-gentle        { animation: floatGentle 4s ease-in-out infinite; }
@@ -308,6 +426,13 @@ h1, h2, h3, h4, h5, h6 {
 .animate-wave-flow-reverse   { animation: waveFlowXReverse 12s ease-in-out infinite; }
 .animate-dash-flow           { animation: dashFlow 8s linear infinite; }
 .animate-node-glow           { animation: nodeGlow 3s ease-in-out infinite; }
+.animate-particle-drift-right { animation: particleDriftRight 2.4s ease-in-out infinite alternate; }
+.animate-particle-drift-left  { animation: particleDriftLeft 2.6s ease-in-out infinite alternate; }
+.animate-particle-shimmer     { animation: particleShimmer 1.2s ease-in-out infinite; }
+.animate-particle-fast-stream { animation: particleFastStream 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.animate-particle-fast-stream-rev { animation: particleFastStreamReverse 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.animate-paint-drip          { animation: paintDripGently 4s ease-in-out infinite; }
+.animate-paint-drop          { animation: paintDropGlow 3s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
@@ -319,7 +444,14 @@ h1, h2, h3, h4, h5, h6 {
   .animate-wave-flow-slow,
   .animate-wave-flow-reverse,
   .animate-dash-flow,
-  .animate-node-glow {
+  .animate-node-glow,
+  .animate-particle-drift-right,
+  .animate-particle-drift-left,
+  .animate-particle-shimmer,
+  .animate-particle-fast-stream,
+  .animate-particle-fast-stream-rev,
+  .animate-paint-drip,
+  .animate-paint-drop {
     animation: none;
   }
 }

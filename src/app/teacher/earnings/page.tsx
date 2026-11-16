@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { TeacherEarningsManager } from '@/components/teacher/TeacherEarningsManager';
 import { ArrowLeft } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export default function TeacherEarningsPage() {
         </Link>
         <TeacherEarningsManager />
       </main>
+      <Footer />
     </div>
   );
 }
