@@ -28,39 +28,67 @@ export async function GET(request: NextRequest) {
     const user = data.user;
     const serviceClient = createServiceClient();
 
-    // Check existing profile
+    // Check authoritative existing profile in backend
     const { data: profile } = await serviceClient
       .from('profiles')
-      .select('*')
+      .select('id, role, onboarding_completed, created_at')
       .eq('id', user.id)
       .maybeSingle();
 
-    const metaName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+    const metaName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'User';
+    const avatarUrl =
+      user.user_metadata?.avatar_url ||
+      user.user_metadata?.picture ||
+      null;
 
-    // 1. If profile doesn't exist, create initial record with onboarding_completed: false
-    if (!profile) {
+    // Detect if this is a newly registered user or incomplete onboarding
+    // A user created within the last 2 minutes or with incomplete onboarding MUST complete onboarding
+    const isRecentlyCreated =
+      user.created_at &&
+      new Date().getTime() - new Date(user.created_at).getTime() < 120000;
+
+    const needsOnboarding =
+      !profile ||
+      profile.onboarding_completed !== true ||
+      (isRecentlyCreated && !profile.onboarding_completed);
+
+    if (needsOnboarding) {
       const nowIso = new Date().toISOString();
-      await serviceClient.from('profiles').insert({
-        id: user.id,
-        name: metaName,
-        email: user.email,
-        role: 'student', // default placeholder until onboarding completed
-        auth_provider: 'google',
-        onboarding_completed: false,
-        created_at: nowIso,
-        updated_at: nowIso,
-      });
 
+      // Ensure profile is marked as onboarding_completed: false
+      // Remove any premature student record created by database triggers
+      try {
+        await serviceClient.from('students').delete().eq('id', user.id);
+      } catch {
+        // Non-blocking
+      }
+
+      await serviceClient.from('profiles').upsert(
+        {
+          id: user.id,
+          name: metaName,
+          email: user.email,
+          role: profile?.role || 'student',
+          onboarding_completed: false,
+          auth_provider: 'google',
+          photo_url: avatarUrl,
+          status: 'active',
+          updated_at: nowIso,
+          created_at: profile?.created_at || nowIso,
+        },
+        { onConflict: 'id' }
+      );
+
+      // Redirect new Google user to onboarding to select their role
       return NextResponse.redirect(new URL('/onboarding', request.url));
     }
 
-    // 2. If profile exists but onboarding was not completed
-    if (profile.onboarding_completed === false) {
-      return NextResponse.redirect(new URL('/onboarding', request.url));
-    }
-
-    // 3. User is fully onboarded -> Redirect to their specific dashboard
-    const role = profile.role;
+    // Existing completed user: redirect directly to their respective portal dashboard
+    const role = profile.role || 'student';
     const targetDashboard =
       role === 'admin'
         ? '/admin'

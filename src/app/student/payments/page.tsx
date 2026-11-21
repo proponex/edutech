@@ -25,6 +25,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { StudentPaymentHistoryItem, ChannelSubscription, ChannelItem, Profile } from '@/types';
+import { LiveCountdownBadge } from '@/components/subscription/live-countdown-badge';
 
 interface ActiveSubscriptionItem {
   subscription: ChannelSubscription;
@@ -44,7 +45,9 @@ export default function StudentPaymentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/student/payments');
+      const res = await fetch('/api/student/payments', {
+        cache: 'no-store',
+      });
       if (res.status === 401) {
         router.push('/');
         return;
@@ -164,7 +167,7 @@ export default function StudentPaymentsPage() {
                   <Clock className="w-6 h-6 stroke-[2.2]" />
                 </div>
                 <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <span
                       className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                         isExpired
@@ -172,12 +175,9 @@ export default function StudentPaymentsPage() {
                           : 'bg-amber-200 text-amber-900'
                       }`}
                     >
-                      {isExpired
-                        ? 'Subscription Expired'
-                        : days === 0
-                        ? 'Expires Today'
-                        : `Expires in ${days} Days`}
+                      {isExpired ? 'Subscription Expired' : 'Expires Soon'}
                     </span>
+                    <LiveCountdownBadge expiresAt={urgentSub.subscription.expires_at} variant="digital" />
                     <span className="text-xs text-[#5F5875] font-medium">
                       Valid until: {expiryFormatted}
                     </span>
@@ -300,21 +300,7 @@ export default function StudentPaymentsPage() {
                             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
                               {subscription.package_type ? subscription.package_type.replace(/_/g, ' ') : 'Full Channel'}
                             </span>
-                            {isExpired ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                                Expired
-                              </span>
-                            ) : isExpiringSoon ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Expires soon
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3 text-[#10B981]" />
-                                Active
-                              </span>
-                            )}
+                            <LiveCountdownBadge expiresAt={subscription.expires_at} variant="pill" />
                           </div>
                           <h3 className="text-base font-extrabold text-[#1E1035] truncate">
                             {channel.name}
@@ -327,21 +313,20 @@ export default function StudentPaymentsPage() {
                       </div>
 
                       {/* Expiry Details Box */}
-                      <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-1.5">
+                      <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-[#5F5875] font-medium flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-[#6244A6]" />
-                            <span>Validity:</span>
+                            <span>Valid until:</span>
                           </span>
                           <span className="font-bold text-[#1E1035]">
                             {expiryDateFormatted}
                           </span>
                         </div>
-                        {daysLeft !== null && daysLeft >= 0 && (
-                          <div className="text-[11px] text-right text-[#6244A6] font-semibold">
-                            {daysLeft === 0 ? 'Expires today' : `${daysLeft} days remaining in cycle`}
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between pt-1 border-t border-[#DCCFFF]/60">
+                          <span className="text-[11px] font-semibold text-[#5F5875]">Time Remaining:</span>
+                          <LiveCountdownBadge expiresAt={subscription.expires_at} variant="digital" />
+                        </div>
                       </div>
 
                       {/* Learning Progress */}

@@ -123,6 +123,27 @@ export function PrepnxStudentHome({
   const [banners, setBanners] = useState<BannerItem[]>([DEFAULT_BANNER]);
   const [heroSlideIdx, setHeroSlideIdx] = useState(0);
   const [isHeroPaused, setIsHeroPaused] = useState(false);
+  const autoResumeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Manual dot selection: switches slide, pauses auto-slide for 5 seconds, then resumes automatically
+  const handleDotClick = (idx: number) => {
+    setHeroSlideIdx(idx);
+    setIsHeroPaused(true);
+    if (autoResumeTimerRef.current) {
+      clearTimeout(autoResumeTimerRef.current);
+    }
+    autoResumeTimerRef.current = setTimeout(() => {
+      setIsHeroPaused(false);
+    }, 5000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (autoResumeTimerRef.current) {
+        clearTimeout(autoResumeTimerRef.current);
+      }
+    };
+  }, []);
 
   // 2. Channels loaded from Supabase
   const [channels, setChannels] = useState<ChannelItem[]>([]);
@@ -266,77 +287,66 @@ export function PrepnxStudentHome({
     return () => clearInterval(interval);
   }, [banners, isHeroPaused]);
 
-  // Load student watch history or latest video
+  // Load student watch history strictly for the authenticated student
   useEffect(() => {
     let ignore = false;
+    const targetUserId = profile?.id;
+
+    if (!targetUserId) {
+      setLastWatched(null);
+      setLoadingWatchHistory(false);
+      return;
+    }
+
     async function loadWatchHistory() {
       try {
         setLoadingWatchHistory(true);
 
-        // 1. Check student_content_progress for the current student
-        if (studentId) {
-          const { data: progressData, error: pErr } = await supabase
-            .from('student_content_progress')
-            .select('content_id, channel_id, progress_percent, watched_seconds, updated_at')
-            .eq('student_id', studentId)
-            .eq('content_type', 'video')
-            .order('updated_at', { ascending: false })
-            .limit(1);
+        // Check student_content_progress strictly for the current authenticated student UUID
+        const { data: progressData, error: pErr } = await supabase
+          .from('student_content_progress')
+          .select('content_id, channel_id, progress_percent, watched_seconds, updated_at')
+          .eq('student_id', targetUserId)
+          .eq('content_type', 'video')
+          .order('updated_at', { ascending: false })
+          .limit(1);
 
-          if (!ignore && !pErr && progressData && progressData.length > 0) {
-            const rec = progressData[0];
-            const { data: vData, error: vErr } = await supabase
-              .from('videos')
-              .select('id, title, subject_name, duration_seconds, channel_id, thumbnail_url, channel:channels(id, name, photo_url, class_id, class:classes(id, name))')
-              .eq('id', rec.content_id)
-              .maybeSingle();
+        if (!ignore && !pErr && progressData && progressData.length > 0) {
+          const rec = progressData[0];
+          const { data: vData, error: vErr } = await supabase
+            .from('videos')
+            .select('id, title, subject_name, duration_seconds, channel_id, thumbnail_url, channel:channels(id, name, photo_url, class_id, class:classes(id, name))')
+            .eq('id', rec.content_id)
+            .maybeSingle();
 
-            if (!ignore && !vErr && vData) {
-              const ch = vData.channel as any;
-              setLastWatched({
-                id: vData.id,
-                title: vData.title,
-                subject_name: vData.subject_name || 'General Subject',
-                duration_seconds: vData.duration_seconds,
-                channel_id: vData.channel_id,
-                channel_name: ch?.name || 'Academic Channel',
-                class_name: ch?.class?.name || 'Class 12',
-                thumbnail_url: vData.thumbnail_url || ch?.photo_url || null,
-                progress_percent: rec.progress_percent || 0,
-                watched_seconds: rec.watched_seconds,
-                updated_at: rec.updated_at,
-              });
-              setLoadingWatchHistory(false);
-              return;
-            }
+          if (!ignore && !vErr && vData) {
+            const ch = vData.channel as any;
+            setLastWatched({
+              id: vData.id,
+              title: vData.title,
+              subject_name: vData.subject_name || 'General Subject',
+              duration_seconds: vData.duration_seconds,
+              channel_id: vData.channel_id,
+              channel_name: ch?.name || 'Academic Channel',
+              class_name: ch?.class?.name || 'Class 12',
+              thumbnail_url: vData.thumbnail_url || ch?.photo_url || null,
+              progress_percent: rec.progress_percent || 0,
+              watched_seconds: rec.watched_seconds,
+              updated_at: rec.updated_at,
+            });
+            setLoadingWatchHistory(false);
+            return;
           }
         }
 
-        // 2. Fallback: If no previous progress recorded yet, fetch the latest published video
-        const { data: latestVideo, error: lErr } = await supabase
-          .from('videos')
-          .select('id, title, subject_name, duration_seconds, channel_id, thumbnail_url, created_at, channel:channels(id, name, photo_url, class_id, class:classes(id, name))')
-          .eq('is_published', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!ignore && !lErr && latestVideo) {
-          const ch = latestVideo.channel as any;
-          setLastWatched({
-            id: latestVideo.id,
-            title: latestVideo.title,
-            subject_name: latestVideo.subject_name || 'Mathematics',
-            duration_seconds: latestVideo.duration_seconds,
-            channel_id: latestVideo.channel_id,
-            channel_name: ch?.name || 'Academic Channel',
-            class_name: ch?.class?.name || 'Class 12',
-            thumbnail_url: latestVideo.thumbnail_url || ch?.photo_url || null,
-            progress_percent: 0,
-          });
+        // STRICT ISOLATION: If student has not watched any videos, watch history is null.
+        // NEVER fall back to another student's or platform-wide videos!
+        if (!ignore) {
+          setLastWatched(null);
         }
       } catch (err) {
         console.error('Error loading watch history:', err);
+        if (!ignore) setLastWatched(null);
       } finally {
         if (!ignore) setLoadingWatchHistory(false);
       }
@@ -346,7 +356,7 @@ export function PrepnxStudentHome({
     return () => {
       ignore = true;
     };
-  }, [studentId, supabase]);
+  }, [profile?.id, supabase]);
 
   // Popular class click: Selects pill & smoothly scrolls to explore courses section
   const handleSelectPopularClass = (className: string) => {
@@ -407,155 +417,167 @@ export function PrepnxStudentHome({
   return (
     <div className="w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-6 sm:py-8 space-y-10 sm:space-y-12 text-[#1E1035] font-sans">
       {/* ========================================================================= */}
-      {/* SECTION 1: HERO BANNER (FULLY VISIBLE - NO OVERLAY WORDS)                 */}
+      {/* SECTION 1 & 2: HERO BANNER + OVERLAYING POPULAR CLASSES                   */}
       {/* ========================================================================= */}
-      <section
-        aria-label="Hero Promotion Banner"
-        onMouseEnter={() => setIsHeroPaused(true)}
-        onMouseLeave={() => setIsHeroPaused(false)}
-        className="relative rounded-2xl sm:rounded-[32px] overflow-hidden bg-gradient-to-r from-[#F5EDFF] via-[#EEE8FF] to-[#FAF9FF] border border-[#DCCFFF]/80 shadow-md transition-all duration-300"
-      >
-        {/* Full-width Responsive Banner Image */}
-        <div className="relative w-full aspect-[21/9] sm:aspect-[24/8] md:aspect-[3.2/1] min-h-[180px] sm:min-h-[220px] md:min-h-[280px] lg:min-h-[320px]">
-          {currentBanner.button_link ? (
-            <Link
-              href={currentBanner.button_link}
-              className="block w-full h-full relative cursor-pointer group"
-              title={currentBanner.title || 'Educational Banner'}
-            >
+      <div className="relative">
+        {/* SECTION 1: HERO BANNER */}
+        <section
+          aria-label="Hero Promotion Banner"
+          onMouseEnter={() => setIsHeroPaused(true)}
+          onMouseLeave={() => setIsHeroPaused(false)}
+          className="relative rounded-2xl sm:rounded-[32px] overflow-hidden bg-gradient-to-r from-[#F5EDFF] via-[#EEE8FF] to-[#FAF9FF] border border-[#DCCFFF]/80 shadow-md transition-all duration-300"
+        >
+          {/* Full-width Responsive Banner Image */}
+          <div className="relative w-full aspect-[21/9] sm:aspect-[24/8] md:aspect-[3.2/1] min-h-[180px] sm:min-h-[220px] md:min-h-[280px] lg:min-h-[320px]">
+            {currentBanner.button_link ? (
+              <Link
+                href={currentBanner.button_link}
+                className="block w-full h-full relative cursor-pointer group"
+                title={currentBanner.title || 'Educational Banner'}
+              >
+                <Image
+                  src={currentBanner.image_url}
+                  alt={currentBanner.title || 'EduTech Learning Banner'}
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.01]"
+                  unoptimized
+                />
+              </Link>
+            ) : (
               <Image
                 src={currentBanner.image_url}
                 alt={currentBanner.title || 'EduTech Learning Banner'}
                 fill
                 priority
                 sizes="100vw"
-                className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.01]"
+                className="w-full h-full object-cover object-center"
                 unoptimized
               />
-            </Link>
-          ) : (
-            <Image
-              src={currentBanner.image_url}
-              alt={currentBanner.title || 'EduTech Learning Banner'}
-              fill
-              priority
-              sizes="100vw"
-              className="w-full h-full object-cover object-center"
-              unoptimized
-            />
+            )}
+          </div>
+
+          {/* Carousel Indicator Dots Overlay on Poster Bottom Center - Moved up to be visible above Popular Classes */}
+          {banners.length >= 1 && (
+            <div className="absolute bottom-16 sm:bottom-20 md:bottom-24 left-0 right-0 flex items-center justify-center z-20 pointer-events-none">
+              <div className="pointer-events-auto flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.35)] transition-all">
+                {banners.map((_, idx) => {
+                  const isCurrent = heroSlideIdx === idx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleDotClick(idx)}
+                      disabled={banners.length <= 1}
+                      aria-label={`Banner slide ${idx + 1}`}
+                      title={`Slide ${idx + 1} of ${banners.length}`}
+                      className={`transition-all duration-300 ${
+                        banners.length <= 1 ? 'cursor-default' : 'cursor-pointer'
+                      } ${
+                        isCurrent
+                          ? 'w-6 h-2.5 rounded-full bg-white shadow-md'
+                          : 'w-2.5 h-2.5 rounded-full bg-white/60 hover:bg-white border border-white/40 shadow-xs hover:scale-110'
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           )}
+        </section>
+
+        {/* SECTION 2: POPULAR CLASSES - 50% OVERLAY ON SLIDE, 50% BELOW SLIDE */}
+        <div className="relative z-30 -mt-12 sm:-mt-14 md:-mt-16 px-2 sm:px-6">
+          <section
+            aria-label="Popular Classes"
+            className="max-w-5xl mx-auto w-full bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-xl shadow-purple-950/10 border border-[#E9DDF8] backdrop-blur-sm"
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Heading */}
+              <div className="flex items-center justify-between lg:justify-start gap-3 shrink-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#1E1035] tracking-tight font-display flex items-center gap-2">
+                  <span>Popular Classes</span>
+                  <span className="text-sm font-normal text-[#6244A6]">✨</span>
+                </h2>
+                <Link
+                  href="/student?tab=channels"
+                  className="text-xs font-bold text-[#6244A6] hover:text-[#4E338A] flex items-center gap-1 group lg:hidden"
+                >
+                  <span>View all</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+
+              {/* 3 Prominent Class Cards (Horizontal Grid on Larger Screens) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 lg:max-w-3xl">
+                {/* Class 12 */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectPopularClass('Class 12')}
+                  className={`group flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
+                    selectedPill === 'Class 12'
+                      ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
+                      : 'bg-[#FAF9FF] text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
+                      selectedPill === 'Class 12' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#EEE8FF] text-[#6244A6]'
+                    }`}>
+                      <GraduationCap className="w-4.5 h-4.5" />
+                    </div>
+                    <span className="text-sm sm:text-base font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 12</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
+                </button>
+
+                {/* Class 11 */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectPopularClass('Class 11')}
+                  className={`group flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
+                    selectedPill === 'Class 11'
+                      ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
+                      : 'bg-[#FAF9FF] text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
+                      selectedPill === 'Class 11' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#EEE8FF] text-[#6244A6]'
+                    }`}>
+                      <BookOpen className="w-4.5 h-4.5" />
+                    </div>
+                    <span className="text-sm sm:text-base font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 11</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
+                </button>
+
+                {/* Class 10 */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectPopularClass('Class 10')}
+                  className={`group flex items-center justify-between px-4 py-3 sm:py-3.5 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
+                    selectedPill === 'Class 10'
+                      ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
+                      : 'bg-[#FAF9FF] text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
+                      selectedPill === 'Class 10' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#EEE8FF] text-[#6244A6]'
+                    }`}>
+                      <Atom className="w-4.5 h-4.5" />
+                    </div>
+                    <span className="text-sm sm:text-base font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 10</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
-
-        {/* Carousel Indicator Dots (Visible when > 1 banner) */}
-        {banners.length > 1 && (
-          <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2 z-20">
-            {banners.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setHeroSlideIdx(idx)}
-                aria-label={`Banner slide ${idx + 1}`}
-                className={`transition-all duration-300 cursor-pointer ${
-                  heroSlideIdx === idx
-                    ? 'w-7 h-2 rounded-full bg-[#6244A6] shadow-sm'
-                    : 'w-2.5 h-2 rounded-full bg-white/70 hover:bg-white'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ========================================================================= */}
-      {/* SECTION 2: POPULAR CLASSES                                                */}
-      {/* ========================================================================= */}
-      <section
-        aria-label="Popular Classes"
-        className="max-w-4xl mx-auto w-full bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-purple-900/5 border border-[#E9DDF8]"
-      >
-        <div className="flex flex-col gap-4 sm:gap-5">
-          {/* Row 1: Heading */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl sm:text-2xl font-bold text-[#1E1035] tracking-tight font-display flex items-center gap-2">
-              <span>Popular Classes</span>
-              <span className="text-sm font-normal text-[#6244A6]">✨</span>
-            </h2>
-            <Link
-              href="/student?tab=channels"
-              className="text-xs font-bold text-[#6244A6] hover:text-[#4E338A] flex items-center gap-1 group"
-            >
-              <span>View all classes</span>
-              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-
-          {/* Row 2: 3 Prominent Class Cards (Dark Theme Font in Default and Hover) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-            {/* Class 12 */}
-            <button
-              type="button"
-              onClick={() => handleSelectPopularClass('Class 12')}
-              className={`group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
-                selectedPill === 'Class 12'
-                  ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
-                  : 'bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center gap-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
-                  selectedPill === 'Class 12' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#F8F6FF] text-[#6244A6]'
-                }`}>
-                  <GraduationCap className="w-5 h-5" />
-                </div>
-                <span className="text-base sm:text-lg font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 12</span>
-              </div>
-              <ChevronRight className="w-5 h-5 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
-            </button>
-
-            {/* Class 11 */}
-            <button
-              type="button"
-              onClick={() => handleSelectPopularClass('Class 11')}
-              className={`group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
-                selectedPill === 'Class 11'
-                  ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
-                  : 'bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center gap-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
-                  selectedPill === 'Class 11' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#F8F6FF] text-[#6244A6]'
-                }`}>
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <span className="text-base sm:text-lg font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 11</span>
-              </div>
-              <ChevronRight className="w-5 h-5 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
-            </button>
-
-            {/* Class 10 */}
-            <button
-              type="button"
-              onClick={() => handleSelectPopularClass('Class 10')}
-              className={`group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 cursor-pointer text-left hover:-translate-y-0.5 ${
-                selectedPill === 'Class 10'
-                  ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] shadow-md'
-                  : 'bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#EEE8FF] hover:text-[#130924] hover:border-[#6244A6] hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center gap-3.5">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform ${
-                  selectedPill === 'Class 10' ? 'bg-[#DCCFFF] text-[#130924]' : 'bg-[#F8F6FF] text-[#6244A6]'
-                }`}>
-                  <Atom className="w-5 h-5" />
-                </div>
-                <span className="text-base sm:text-lg font-bold text-[#1E1035] group-hover:text-[#130924] transition-colors">Class 10</span>
-              </div>
-              <ChevronRight className="w-5 h-5 text-[#6244A6] group-hover:text-[#130924] group-hover:translate-x-1 transition-all stroke-[2.5]" />
-            </button>
-          </div>
-        </div>
-      </section>
+      </div>
 
       {/* ========================================================================= */}
       {/* SECTION 3: WATCH HISTORY / CONTINUE WATCHING                              */}

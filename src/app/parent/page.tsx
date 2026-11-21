@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { performFullLogout } from '@/lib/auth-logout';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Card, CardContent } from '@/components/ui/card';
@@ -284,9 +285,7 @@ function ParentDashboardContent() {
 
   // Logout
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    await performFullLogout('/?auth=login#hero-login');
   };
 
   const pendingRequests = requests.filter((r) => r.status === 'pending');

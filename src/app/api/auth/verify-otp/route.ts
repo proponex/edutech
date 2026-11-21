@@ -8,7 +8,10 @@ export async function POST(request: Request) {
     const { email, otp, purpose } = body;
 
     if (!email || !otp || !purpose) {
-      return NextResponse.json({ error: 'Email, verification code, and purpose are required.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Email, verification code, and purpose are required.' },
+        { status: 400 }
+      );
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -54,143 +57,89 @@ export async function POST(request: Request) {
       });
     }
 
-    // 3. PURPOSE: SIGNUP (CREATE AUTHENTICATED USER & PROFILE)
+    // 3. PURPOSE: SIGNUP (CREATE AUTHENTICATED USER & REDIRECT TO ONBOARDING)
     if (purpose === 'signup') {
       const password = (payload.password as string) || '';
-      const name = (payload.name as string) || 'Student';
-      const role = (payload.role as string) || 'student';
+      const name = (payload.name as string) || normalizedEmail.split('@')[0];
 
       if (!password) {
-        return NextResponse.json({ error: 'Registration session expired. Please start registration again.' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Registration session expired. Please start registration again.' },
+          { status: 400 }
+        );
       }
 
-      // 3a. Create user with Admin client (auto-confirm email since OTP verified via SMTP)
+      // Check if user already exists in auth.users
+      let userId: string;
       const { data: authData, error: createAuthError } = await serviceClient.auth.admin.createUser({
         email: normalizedEmail,
         password,
         email_confirm: true,
         user_metadata: {
           name,
-          role,
         },
       });
 
-      if (createAuthError || !authData.user) {
-        const msg = createAuthError?.message || 'Failed to create user account.';
-        return NextResponse.json({ error: msg }, { status: 400 });
+      if (createAuthError) {
+        // If user already exists in auth, try retrieving existing user
+        if (createAuthError.message.toLowerCase().includes('already')) {
+          return NextResponse.json(
+            { error: 'An account with this email already exists. Please sign in.' },
+            { status: 409 }
+          );
+        }
+        return NextResponse.json(
+          { error: createAuthError.message || 'Failed to create user account.' },
+          { status: 400 }
+        );
       }
 
-      const userId = authData.user.id;
+      userId = authData.user.id;
       const nowIso = new Date().toISOString();
 
-      // 3b. Insert Profile
-      const studentPhone = payload.phone || null;
-      const studentParentPhone = payload.parentPhone || payload.parent_phone || null;
-      const studentClassId = payload.classId || payload.class_id || null;
-      const studentBoardId = payload.boardId || payload.board_id || null;
-      const studentLanguage = payload.preferredLanguage || payload.preferred_language || null;
-      const studentSubjects = payload.subjects || null;
+      // Upsert initial profile marked as onboarding_completed: false
+      // Remove any premature student record created by database triggers
+      try {
+        await serviceClient.from('students').delete().eq('id', userId);
+      } catch {
+        // Non-blocking
+      }
 
       await serviceClient.from('profiles').upsert(
         {
           id: userId,
           name,
           email: normalizedEmail,
-          role,
-          phone: studentPhone,
-          parent_phone: studentParentPhone,
-          class_id: studentClassId,
-          board_id: studentBoardId,
-          preferred_language: studentLanguage,
-          subjects: studentSubjects,
-          status: 'active',
-          onboarding_completed: true,
+          role: 'student', // placeholder to satisfy DB NOT NULL constraint; onboarding_completed: false enforces role selection
+          onboarding_completed: false,
           auth_provider: 'email',
+          status: 'active',
           updated_at: nowIso,
           created_at: nowIso,
         },
         { onConflict: 'id' }
       );
 
-      // 3c. Insert into role-specific table
-      if (role === 'student') {
-        // Generate permanent student ID code (ED-YYYY-NNNNNN)
-        const year = new Date().getFullYear();
-        const randPart = Math.floor(100000 + Math.random() * 900000);
-        const studentIdCode = `ED-${year}-${randPart}`;
-
-        await serviceClient.from('students').upsert(
-          {
-            id: userId,
-            name,
-            email: normalizedEmail,
-            student_id_code: studentIdCode,
-            phone: studentPhone,
-            parent_phone: studentParentPhone,
-            class_id: studentClassId,
-            board_id: studentBoardId,
-            preferred_language: studentLanguage,
-            updated_at: nowIso,
-          },
-          { onConflict: 'id' }
-        );
-
-        // Update profile with student_id_code
-        try {
-          await serviceClient.from('profiles').update({ student_id_code: studentIdCode }).eq('id', userId);
-        } catch {
-          // ignore
-        }
-      } else if (role === 'teacher') {
-        await serviceClient.from('teachers').upsert(
-          {
-            id: userId,
-            name,
-            email: normalizedEmail,
-            updated_at: nowIso,
-          },
-          { onConflict: 'id' }
-        );
-      } else if (role === 'parent') {
-        await serviceClient.from('parents').upsert(
-          {
-            id: userId,
-            name,
-            email: normalizedEmail,
-            phone: payload.phone || null,
-            updated_at: nowIso,
-          },
-          { onConflict: 'id' }
-        );
-      }
-
-      // 3d. Automatically sign the user in so session cookies are established
+      // Sign the user in so session cookies are established
       const userClient = await createClient();
       await userClient.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
 
-      const redirectUrl =
-        role === 'admin'
-          ? '/admin'
-          : role === 'teacher'
-          ? '/teacher'
-          : role === 'parent'
-          ? '/parent'
-          : '/student';
-
       return NextResponse.json({
         success: true,
-        role,
-        redirectUrl,
-        message: 'Account successfully registered and verified!',
+        redirectUrl: '/onboarding',
+        message: 'Account verified! Redirecting to complete your profile…',
       });
     }
 
     return NextResponse.json({ success: true, message: 'Verification successful.' });
   } catch (error) {
     console.error('[API Verify OTP Error]:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred during verification.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'An unexpected error occurred during verification.' },
+      { status: 500 }
+    );
   }
 }

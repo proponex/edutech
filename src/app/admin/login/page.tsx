@@ -75,8 +75,7 @@ function AdminLoginForm() {
       }
 
       // STEP 3: Redirect to Admin Dashboard (Income tab by default)
-      router.push('/admin');
-      router.refresh();
+      window.location.href = '/admin';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An unexpected authentication error occurred.');
     } finally {

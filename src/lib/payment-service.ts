@@ -781,7 +781,7 @@ export const PaymentService = {
           class_id: params.classId || null,
           subject_name: params.subjectName || null,
           expires_at: newExpiry.toISOString(),
-          duration: '1_month',
+          duration: '28_days',
           updated_at: now.toISOString(),
         })
         .eq('id', existing.id);
@@ -795,7 +795,7 @@ export const PaymentService = {
         status: 'active',
         starts_at: now.toISOString(),
         expires_at: newExpiry.toISOString(),
-        duration: '1_month',
+        duration: '28_days',
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
       });

@@ -726,10 +726,14 @@ export const MonetizationService = {
         .maybeSingle();
 
       if (sub) {
-        // If has expires_at, check date
-        if (!sub.expires_at || new Date(sub.expires_at) > new Date()) {
+        const nowMs = Date.now();
+        const expiryMs = sub.expires_at
+          ? new Date(sub.expires_at).getTime()
+          : new Date(sub.starts_at || sub.created_at || nowMs).getTime() + DURATION_28_DAYS_MS;
+
+        if (expiryMs > nowMs) {
           // If package is entire channel, grant access
-          if (sub.package_type === 'entire_channel') {
+          if (sub.package_type === 'entire_channel' || !sub.subject_name) {
             hasAccess = true;
           } else if (sub.package_type === 'class_subject') {
             // Must match subject
@@ -739,6 +743,14 @@ export const MonetizationService = {
           } else {
             hasAccess = true;
           }
+        } else {
+          // Explicitly expired
+          try {
+            await supabase
+              .from('channel_subscriptions')
+              .update({ status: 'expired', updated_at: new Date().toISOString() })
+              .eq('id', sub.id);
+          } catch {}
         }
       }
     }

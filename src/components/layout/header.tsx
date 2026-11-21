@@ -8,8 +8,10 @@ import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { GraduationCap, Menu, X, LogOut, LayoutDashboard, User, Bell, Settings, HelpCircle, CreditCard, ChevronDown } from 'lucide-react';
+import { GraduationCap, Menu, X, LogOut, LayoutDashboard, User, Bell, HelpCircle, CreditCard, ChevronDown } from 'lucide-react';
 import { Profile } from '@/types';
+import { StudentNotificationsPopover } from '@/components/layout/student-notifications-popover';
+import { performFullLogout } from '@/lib/auth-logout';
 
 export function Header() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export function Header() {
   const [teacherMenuOpen, setTeacherMenuOpen] = useState(false);
   const [studentMenuOpen, setStudentMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsUnreadCount, setNotificationsUnreadCount] = useState(0);
   const studentMenuRef = useRef<HTMLDivElement>(null);
   const teacherMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -111,11 +114,10 @@ export function Header() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
     setProfile(null);
     setTeacherMenuOpen(false);
-    router.push('/');
-    router.refresh();
+    setStudentMenuOpen(false);
+    await performFullLogout('/?auth=login#hero-login');
   };
 
   const getDashboardUrl = () => {
@@ -179,8 +181,40 @@ export function Header() {
 
   const brandLink = isTeacher ? '/teacher' : isStudent ? '/student' : isParent ? '/parent' : '/';
 
+  // Fetch unread notifications count for student
+  useEffect(() => {
+    let ignore = false;
+    async function checkUnread() {
+      try {
+        const res = await fetch('/api/student/notifications?page=1&limit=1', {
+          cache: 'no-store',
+        });
+        if (res.ok && !ignore) {
+          const data = await res.json();
+          if (data?.unreadCount !== undefined) {
+            setNotificationsUnreadCount(data.unreadCount);
+          }
+        }
+      } catch {
+        // fail silently
+      }
+    }
+    if (isStudent) {
+      checkUnread();
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [isStudent]);
+
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-xl transition-all relative border-b border-[#DCCFFF] bg-[#EEE8FF]/95 shadow-sm text-[#1E1035]">
+    <header
+      className={`sticky top-0 z-50 w-full transition-all relative border-b shadow-xs text-[#1E1035] ${
+        isStudent
+          ? 'backdrop-blur-2xl border-white/50 bg-[#FAF9FF]/70 shadow-[0_4px_30px_rgba(98,68,166,0.05)]'
+          : 'backdrop-blur-xl border-[#DCCFFF] bg-[#EEE8FF]/95 shadow-sm'
+      }`}
+    >
       {/* Animated Fast-Moving Particles Across All Dashboards */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10 select-none">
         {/* Ambient Glowing Orbs */}
@@ -306,9 +340,9 @@ export function Header() {
                 )}
               </div>
             ) : isStudent ? (
-              /* Prepnx Student Header: Bell + Dropdown Avatar in Lavender & Dark Font Theme */
+              /* Prepnx Student Header: Bell + Dropdown Avatar in Glassmorphism Theme */
               <div className="flex items-center gap-2.5">
-                {/* Notifications Dropdown */}
+                {/* Notifications Dropdown with Paginated View All Updates */}
                 <div className="relative" ref={notificationsRef}>
                   <button
                     type="button"
@@ -316,64 +350,27 @@ export function Header() {
                       setNotificationsOpen(!notificationsOpen);
                       setStudentMenuOpen(false);
                     }}
-                    className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer backdrop-blur-md shadow-xs ${
+                    className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer backdrop-blur-xl shadow-xs ${
                       notificationsOpen
-                        ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6] font-bold'
-                        : 'bg-white text-[#1E1035] hover:bg-[#EEE8FF] hover:text-[#130924] border border-[#DCCFFF]'
+                        ? 'bg-neutral-900/15 text-[#130924] border-2 border-neutral-900/25 font-bold shadow-sm'
+                        : 'bg-white/40 text-[#1E1035] hover:bg-black/[0.04] hover:text-[#130924] border border-white/70'
                     }`}
                     title="Notifications"
                     aria-label="View notifications"
                   >
-                    <Bell className="w-4.5 h-4.5 text-[#1E1035] group-hover:text-[#130924]" />
-                    <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#6244A6] ring-2 ring-white" />
+                    <Bell className="w-4.5 h-4.5 text-[#1E1035]" />
+                    {notificationsUnreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#6244A6] text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white shadow-xs animate-pulse">
+                        {notificationsUnreadCount > 9 ? '9+' : notificationsUnreadCount}
+                      </span>
+                    )}
                   </button>
 
-                  {notificationsOpen && (
-                    <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl bg-white border border-[#DCCFFF] shadow-2xl shadow-[#1E1035]/15 p-4 z-[100] animate-in fade-in zoom-in-95 backdrop-blur-xl text-[#1E1035]">
-                      <div className="flex items-center justify-between pb-3 border-b border-[#EEE8FF]">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-extrabold text-sm text-[#1E1035]">Notifications</h3>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
-                            2 New
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setNotificationsOpen(false)}
-                          className="text-xs font-semibold text-[#5F5875] hover:text-[#130924] transition-colors cursor-pointer"
-                        >
-                          Mark all as read
-                        </button>
-                      </div>
-
-                      <div className="py-2.5 space-y-2.5 max-h-72 overflow-y-auto">
-                        <div className="p-3 rounded-xl bg-[#F8F6FF] border border-[#EEE8FF] hover:bg-[#EEE8FF] transition-colors">
-                          <p className="text-xs font-bold text-[#1E1035]">🎉 Welcome to EduTech Portal</p>
-                          <p className="text-[11px] text-[#5F5875] mt-1 leading-relaxed">
-                            Explore your academic curriculum, syllabus notes, and video channels.
-                          </p>
-                          <span className="text-[10px] font-semibold text-[#6244A6] mt-1.5 block">Just now</span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-[#F8F6FF] border border-[#EEE8FF] hover:bg-[#EEE8FF] transition-colors">
-                          <p className="text-xs font-bold text-[#1E1035]">📚 New Lesson Available</p>
-                          <p className="text-[11px] text-[#5F5875] mt-1 leading-relaxed">
-                            Class 12 Mathematics video lessons and notes are ready for you.
-                          </p>
-                          <span className="text-[10px] font-semibold text-[#6244A6] mt-1.5 block">2 hours ago</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2.5 border-t border-[#EEE8FF] text-center">
-                        <Link
-                          href="/student"
-                          onClick={() => setNotificationsOpen(false)}
-                          className="text-xs font-bold text-[#6244A6] hover:text-[#130924] transition-colors"
-                        >
-                          View All Dashboard Updates
-                        </Link>
-                      </div>
-                    </div>
-                  )}
+                  <StudentNotificationsPopover
+                    isOpen={notificationsOpen}
+                    onClose={() => setNotificationsOpen(false)}
+                    onUnreadCountChange={(count) => setNotificationsUnreadCount(count)}
+                  />
                 </div>
 
                 {/* Profile Menu Dropdown */}
@@ -384,15 +381,15 @@ export function Header() {
                       setStudentMenuOpen(!studentMenuOpen);
                       setNotificationsOpen(false);
                     }}
-                    className={`flex items-center gap-2 p-1 pr-2.5 rounded-full transition-all cursor-pointer group shadow-xs ${
+                    className={`flex items-center gap-2 p-1 pr-2.5 rounded-full transition-all duration-300 cursor-pointer group shadow-xs backdrop-blur-xl ${
                       studentMenuOpen
-                        ? 'bg-[#EEE8FF] text-[#130924] border-2 border-[#6244A6]'
-                        : 'border border-[#DCCFFF] hover:border-[#6244A6] bg-white text-[#1E1035] hover:bg-[#EEE8FF] hover:text-[#130924]'
+                        ? 'bg-neutral-900/15 text-[#130924] border-2 border-neutral-900/25'
+                        : 'border border-white/70 hover:border-black/15 bg-white/40 text-[#1E1035] hover:bg-black/[0.04] hover:text-[#130924]'
                     }`}
                     title="Student Profile & Menu"
                     aria-label="Open student menu"
                   >
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#DCCFFF] flex items-center justify-center bg-[#EEE8FF] shrink-0">
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/80 flex items-center justify-center bg-[#EEE8FF] shrink-0 shadow-2xs">
                       {profile.photo_url ? (
                         <Image
                           src={profile.photo_url}
@@ -434,17 +431,6 @@ export function Header() {
                         >
                           <User className="w-4 h-4 text-[#6244A6]" />
                           My Profile
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStudentMenuOpen(false);
-                            handleStudentProfileClick();
-                          }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-[#EEE8FF] text-[#1E1035] hover:text-[#130924] transition-colors text-left cursor-pointer"
-                        >
-                          <Settings className="w-4 h-4 text-[#6244A6]" />
-                          Account Settings
                         </button>
                         <Link
                           href="/student/payments"
@@ -508,7 +494,7 @@ export function Header() {
           ) : !loading ? (
             <div className="flex items-center gap-3">
               <Link
-                href="/"
+                href="/?auth=login#hero-login"
                 className="inline-flex items-center justify-center font-bold rounded-xl transition-all duration-200 px-4 py-2.5 text-sm text-[#3D1E6D] hover:text-[#1E1035] hover:bg-[#EEE8FF]/80"
               >
                 Sign In
@@ -655,7 +641,17 @@ function NavLinksWrapper({
   return (
     <Suspense
       fallback={
-        <nav className={mobile ? 'flex flex-col gap-2' : 'hidden md:flex items-center gap-2 p-1.5 rounded-full bg-white/80 border border-[#DCCFFF]'}>
+        <nav
+          className={
+            mobile
+              ? isStudent
+                ? 'flex flex-col gap-1.5 p-1.5 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60'
+                : 'flex flex-col gap-2'
+              : isStudent
+              ? 'hidden md:flex items-center gap-1.5 p-1.5 rounded-full bg-white/35 dark:bg-black/20 backdrop-blur-xl border border-white/70 dark:border-white/10 shadow-[0_8px_32px_0_rgba(110,89,165,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.8)]'
+              : 'hidden md:flex items-center gap-2 p-1.5 rounded-full bg-white/80 border border-[#DCCFFF]'
+          }
+        >
           {navLinks.map((link) => (
             <Link
               key={link.name}
@@ -663,7 +659,11 @@ function NavLinksWrapper({
               onClick={onNavigate}
               className={
                 mobile
-                  ? 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-[#1E1035] border border-[#DCCFFF]'
+                  ? isStudent
+                    ? 'px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/40 text-[#3D2C59] border border-white/60'
+                    : 'px-4 py-2 rounded-xl text-sm font-bold bg-white text-[#1E1035] border border-[#DCCFFF]'
+                  : isStudent
+                  ? 'px-4.5 py-1.5 rounded-full text-sm font-semibold text-[#3D2C59] border border-transparent'
                   : 'px-4 py-1.5 rounded-full text-sm font-bold bg-white text-[#1E1035] border border-[#DCCFFF]'
               }
             >
@@ -724,6 +724,30 @@ function NavLinksContent({
   };
 
   if (mobile) {
+    if (isStudent) {
+      return (
+        <nav className="flex flex-col gap-1.5 p-1.5 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60">
+          {navLinks.map((link) => {
+            const isActive = checkIsActive(link);
+            return (
+              <Link
+                key={link.name}
+                href={link.href}
+                onClick={onNavigate}
+                className={`px-4 py-2.5 rounded-xl text-sm transition-all duration-300 ${
+                  isActive
+                    ? 'font-extrabold bg-neutral-900/15 text-[#130924] border border-neutral-900/20 shadow-xs backdrop-blur-md'
+                    : 'font-semibold text-[#493963] hover:text-[#130924] hover:bg-black/[0.04] border border-transparent'
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
+        </nav>
+      );
+    }
+
     return (
       <nav className="flex flex-col gap-1.5">
         {navLinks.map((link) => {
@@ -737,6 +761,29 @@ function NavLinksContent({
                 isActive
                   ? 'font-black bg-[#DCCFFF] text-[#130924] border-2 border-[#6244A6] shadow-sm'
                   : 'font-bold bg-white text-[#1E1035] border border-[#DCCFFF] hover:bg-[#DCCFFF] hover:text-[#130924]'
+              }`}
+            >
+              {link.name}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
+  if (isStudent) {
+    return (
+      <nav className="hidden md:flex items-center gap-1.5 p-1.5 rounded-full bg-white/35 dark:bg-black/20 border border-white/70 dark:border-white/10 shadow-[0_8px_32px_0_rgba(110,89,165,0.08),inset_0_1px_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl ring-1 ring-black/[0.03]">
+        {navLinks.map((link) => {
+          const isActive = checkIsActive(link);
+          return (
+            <Link
+              key={link.name}
+              href={link.href}
+              className={`px-4.5 py-1.5 rounded-full text-sm font-semibold transition-all duration-300 ease-out cursor-pointer ${
+                isActive
+                  ? 'bg-neutral-900/15 dark:bg-white/20 text-[#130924] dark:text-white font-extrabold border border-neutral-900/20 dark:border-white/25 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.7),0_2px_8px_0_rgba(0,0,0,0.08)] backdrop-blur-md scale-[1.02]'
+                  : 'text-[#493963] dark:text-neutral-300 hover:text-[#130924] dark:hover:text-white hover:bg-neutral-900/5 dark:hover:bg-white/10 border border-transparent hover:border-black/5 hover:scale-[1.01]'
               }`}
             >
               {link.name}

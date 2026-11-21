@@ -47,6 +47,7 @@ import {
   ScopePricingConfig,
 } from '@/types';
 import { StudentService } from '@/lib/student-service';
+import { LiveCountdownBadge } from '@/components/subscription/live-countdown-badge';
 import { MuxVideoPlayer } from '@/components/shared/MuxVideoPlayer';
 
 function ChannelDetailContent() {
@@ -602,13 +603,12 @@ function ChannelDetailContent() {
             {/* Subscribe / Subscribed / Expired Status Button */}
             <div className="shrink-0">
               {isSubscribed ? (
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-bold shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 text-xs font-bold shadow-sm">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>
-                      Active (28-Day Access){subscriptionStatus?.expiresAt || subscription?.expires_at ? ` • Expires ${new Date((subscriptionStatus?.expiresAt || subscription?.expires_at)!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
-                    </span>
+                    <span>Active (28-Day Access)</span>
                   </div>
+                  <LiveCountdownBadge expiresAt={subscriptionStatus?.expiresAt || subscription?.expires_at} variant="digital" />
                   <Button
                     variant="outline"
                     size="sm"

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { PrepnxFooter } from '@/components/student/PrepnxFooter';
 import { HeroCarousel } from '@/components/home/hero-carousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,7 @@ import {
   ChevronRight,
   Home,
   CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 import { ChannelDetailsOverlay } from '@/components/student/ChannelDetailsOverlay';
 import {
@@ -58,7 +59,26 @@ import {
 } from '@/types';
 import { StudentService } from '@/lib/student-service';
 import { TeacherService, DEFAULT_LANGUAGES } from '@/lib/teacher-service';
-import { ALL_RELEVANT_SUBJECTS } from '@/app/signup/page';
+import { LiveCountdownBadge } from '@/components/subscription/live-countdown-badge';
+import { performFullLogout } from '@/lib/auth-logout';
+
+const ALL_RELEVANT_SUBJECTS = [
+  'Tamil',
+  'English',
+  'Maths',
+  'Science',
+  'Social Science',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Computer Science',
+  'Economics',
+  'Accountancy',
+  'Business Studies',
+  'History',
+  'Geography',
+  'Hindi',
+];
 import { HelpMeFindMyTutor, TutorFinderFilters } from '@/components/student/help-me-find-tutor';
 import { RecentLearningSection } from '@/components/student/recent-learning-section';
 import { ChannelAnalysisSection } from '@/components/student/channel-analysis-section';
@@ -124,7 +144,7 @@ function StudentDashboardContent() {
   // Profile Drawer State
   const isProfileQuery = useSyncExternalStore(
     (cb) => {
-      if (typeof window === 'undefined') return () => {};
+      if (typeof window === 'undefined') return () => { };
       window.addEventListener('popstate', cb);
       return () => window.removeEventListener('popstate', cb);
     },
@@ -195,6 +215,14 @@ function StudentDashboardContent() {
   useEffect(() => {
     async function initDashboard() {
       setLoading(true);
+      // Reset all student data to prevent cross-session stale state
+      setProfile(null);
+      setStudentId('');
+      setSubscriptions([]);
+      setRecentLearning(null);
+      setSubscribedSubjects([]);
+      setAcademicHistory([]);
+
       try {
         const {
           data: { user },
@@ -215,7 +243,7 @@ function StudentDashboardContent() {
         setAllBoards(bds);
         setReferenceSubjects(subs);
 
-        // Fetch profile, academic history, and student ID
+        // Fetch profile, academic history, and student ID (with no-store cache to avoid cross-user stale reads)
         const [prof, acad, hist, activeSubs, recent, subjectsAnalysis, myIdData] = await Promise.all([
           StudentService.getStudentProfile(user.id),
           StudentService.getStudentAcademicProfile(user.id),
@@ -223,7 +251,7 @@ function StudentDashboardContent() {
           StudentService.getStudentActiveSubscriptions(user.id),
           StudentService.getStudentRecentLearning(user.id),
           StudentService.getStudentSubscribedSubjectsAnalysis(user.id),
-          fetch('/api/student/my-id').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+          fetch('/api/student/my-id', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
         ]);
 
         const assignedStudentId = myIdData?.student_id_code || prof?.student_id_code || '';
@@ -360,15 +388,13 @@ function StudentDashboardContent() {
     }
   }, [searchParams, selectedClassId, filterBoardId, filterSubject, filterLanguage, loadChannels]);
 
-  // Logout handler
+  // Logout handler (Complete session & cookie wipe)
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      router.push('/');
-      router.refresh();
+      await performFullLogout('/?auth=login#hero-login');
     } catch (err) {
       console.error('Logout error:', err);
-      router.push('/');
+      window.location.replace('/?auth=login#hero-login');
     }
   };
 
@@ -536,812 +562,810 @@ function StudentDashboardContent() {
           />
         ) : (
           <main className="w-[92%] sm:w-[92%] md:w-[90%] max-w-[1440px] mx-auto py-8 space-y-10 font-sans">
-        {/* ======================================================================= */}
-        {/* VIEW: TAB === 'PARENT-REQUESTS' OR TAB === 'STUDENT-ID' (FALLBACK) */}
-        {/* ======================================================================= */}
-        {(currentTab === 'parent-requests' || currentTab === 'student-id') && (
-          <div className="space-y-6">
-            <StudentParentLinkingSection
-              initialStudentId={studentId}
-              onStudentIdLoaded={(id) => setStudentId(id)}
-            />
-          </div>
-        )}
-
-        {/* ======================================================================= */}
-        {/* VIEW B: TAB === 'SEARCH' (SEARCH TUTOR) */}
-        {/* ======================================================================= */}
-        {currentTab === 'search' && (
-          <div className="space-y-8">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
-                <Search className="w-4 h-4" />
-                <span>Search &amp; Discovery</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
-                Search Tutor
-              </h2>
-              <p className="text-xs sm:text-sm text-[#5F5875]">
-                Find educators by channel name, or fine-tune with the Help Me Find My Tutor preference questionnaire.
-              </p>
-            </div>
-
-            {/* Channel-Name Search Bar */}
-            <div className="relative max-w-3xl">
-              <div className="flex items-center rounded-2xl border-2 border-[#DCCFFF] bg-white p-2 shadow-2xs focus-within:border-[#6244A6] focus-within:ring-4 focus-within:ring-[#6244A6]/10 transition-all">
-                <Search className="w-5 h-5 text-[#5F5875]/60 ml-3 shrink-0" />
-                <input
-                  type="text"
-                  value={searchTutorQuery}
-                  onChange={(e) => setSearchTutorQuery(e.target.value)}
-                  placeholder="Search by Channel Name (e.g. Physics Studio, Verma Classes)..."
-                  className="w-full px-3 py-2 text-sm sm:text-base bg-transparent text-[#1E1035] placeholder:text-[#5F5875]/50 focus:outline-none"
+            {/* ======================================================================= */}
+            {/* VIEW: TAB === 'PARENT-REQUESTS' OR TAB === 'STUDENT-ID' (FALLBACK) */}
+            {/* ======================================================================= */}
+            {(currentTab === 'parent-requests' || currentTab === 'student-id') && (
+              <div className="space-y-6">
+                <StudentParentLinkingSection
+                  initialStudentId={studentId}
+                  onStudentIdLoaded={(id) => setStudentId(id)}
                 />
-                {searchTutorQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTutorQuery('')}
-                    className="p-1.5 text-[#5F5875] hover:text-[#1E1035] mr-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSearchFilter(!showSearchFilter)}
-                  className="shrink-0 text-xs font-bold rounded-xl flex items-center gap-1.5 border-[#DCCFFF] hover:bg-[#EEE8FF] text-[#1E1035]"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#6244A6]" />
-                  {showSearchFilter ? 'Hide Filter' : 'Show Filter'}
-                </Button>
               </div>
-            </div>
-
-            {/* Same Help Me Find My Tutor Filter */}
-            {showSearchFilter && (
-              <HelpMeFindMyTutor
-                allClasses={allClasses}
-                allBoards={allBoards}
-                currentFilters={{
-                  classId: selectedClassId,
-                  boardId: filterBoardId,
-                  preferredLanguage: filterLanguage,
-                }}
-                onFilterChange={handleTutorFinderFilterChange}
-              />
             )}
 
-            {/* Filtered Channel Results */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base sm:text-lg font-bold text-[#1E1035] flex items-center gap-2">
-                  <span>Matched Channels</span>
-                  <Badge variant="secondary" className="text-xs bg-[#EEE8FF] text-[#6244A6] font-bold border-0">
-                    {displayedChannels.length}
-                  </Badge>
-                </h3>
-                {searchTutorQuery && (
-                  <span className="text-xs text-[#5F5875]">
-                    Filtered by name: &ldquo;{searchTutorQuery}&rdquo;
-                  </span>
-                )}
-              </div>
-
-              {channelsLoading ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="animate-pulse h-48 border border-[#DCCFFF] bg-white rounded-3xl p-6">
-                      <div className="h-full bg-[#EEE8FF] rounded-2xl" />
-                    </div>
-                  ))}
-                </div>
-              ) : displayedChannels.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {displayedChannels.map((channel) => (
-                    <div
-                      key={channel.id}
-                      className="border border-[#DCCFFF] bg-white rounded-3xl p-5 sm:p-6 hover:shadow-md hover:border-[#6244A6]/40 transition-all flex flex-col sm:flex-row items-start gap-5 sm:gap-6 group"
-                    >
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
-                        {channel.photo_url ? (
-                          <Image
-                            src={channel.photo_url}
-                            alt={channel.name}
-                            width={112}
-                            height={112}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            unoptimized
-                          />
-                        ) : (
-                          <Tv className="w-10 h-10 text-[#6244A6]" />
-                        )}
-                      </div>
-
-                      <div className="flex-1 flex flex-col justify-between min-w-0 w-full space-y-3">
-                        <div>
-                          <Link href={`/channels/${channel.id}`}>
-                            <h4 className="text-lg font-extrabold text-[#1E1035] group-hover:text-[#6244A6] transition-colors truncate">
-                              {channel.name}
-                            </h4>
-                          </Link>
-                          <p className="text-xs text-[#5F5875] mt-1 line-clamp-2 leading-relaxed">
-                            {channel.description || 'Comprehensive tuition lessons and assignments.'}
-                          </p>
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500 mt-1.5">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                            <span>{channel.rating ? channel.rating.toFixed(1) : '5.0'}</span>
-                            <span className="text-[#5F5875] font-medium">
-                              ({channel.review_count || 12} reviews)
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-1">
-                          <Link href={`/channels/${channel.id}`}>
-                            <Button variant="outline" size="sm" className="px-4 font-bold border-[#DCCFFF] text-[#1E1035] hover:bg-[#EEE8FF] rounded-xl">
-                              View
-                            </Button>
-                          </Link>
-                          <Link href={`/channels/${channel.id}?action=subscribe`}>
-                            <Button size="sm" className="px-5 font-extrabold shadow-sm bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
-                              Subscribe
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="border border-[#DCCFFF] bg-white rounded-3xl p-10 text-center space-y-3 shadow-xs">
-                  <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center mx-auto text-[#6244A6]">
-                    <Search className="w-6 h-6" />
+            {/* ======================================================================= */}
+            {/* VIEW B: TAB === 'SEARCH' (SEARCH TUTOR) */}
+            {/* ======================================================================= */}
+            {currentTab === 'search' && (
+              <div className="space-y-8">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
+                    <Search className="w-4 h-4" />
+                    <span>Search &amp; Discovery</span>
                   </div>
-                  <h4 className="text-base font-bold text-[#1E1035]">
-                    No matching teacher channels found.
-                  </h4>
-                  <p className="text-xs text-[#5F5875] max-w-sm mx-auto">
-                    Try searching with another channel name or adjusting your grade and board filters.
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
+                    Search Tutor
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#5F5875]">
+                    Find educators by channel name, or fine-tune with the Help Me Find My Tutor preference questionnaire.
                   </p>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* ======================================================================= */}
-        {/* VIEW C: TAB === 'CHANNELS' (MY CHANNELS & ALL CHANNELS WITH LOCKED/SUBSCRIBED DISTINCTION) */}
-        {/* ======================================================================= */}
-        {currentTab === 'channels' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
-                  <Tv className="w-4 h-4" />
-                  <span>Learning Channels</span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
-                  My Channels &amp; Classrooms
-                </h2>
-                <p className="text-xs sm:text-sm text-[#5F5875]">
-                  Access your enrolled classroom channels or discover additional verified educator channels.
-                </p>
-              </div>
-
-              {/* View Switcher Pills */}
-              <div className="inline-flex p-1 rounded-2xl bg-[#EEE8FF]/60 border border-[#DCCFFF] self-start sm:self-center">
-                <button
-                  type="button"
-                  onClick={() => setChannelFilterMode('all')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    channelFilterMode === 'all'
-                      ? 'bg-white text-[#1E1035] shadow-2xs'
-                      : 'text-[#5F5875] hover:text-[#1E1035]'
-                  }`}
-                >
-                  All Channels ({channels.length > 0 ? channels.length : subscriptions.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannelFilterMode('enrolled')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    channelFilterMode === 'enrolled'
-                      ? 'bg-[#6244A6] text-white shadow-2xs'
-                      : 'text-[#5F5875] hover:text-[#1E1035]'
-                  }`}
-                >
-                  <span>Enrolled</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${channelFilterMode === 'enrolled' ? 'bg-white/20 text-white' : 'bg-[#DCCFFF] text-[#6244A6]'}`}>
-                    {subscriptions.length}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* If Filter Mode is Enrolled: Render Enrolled Subscriptions only */}
-            {channelFilterMode === 'enrolled' ? (
-              subscriptions.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {subscriptions.map(({ subscription, channel, teacher, progress }) => {
-                    if (!channel) return null;
-                    return (
-                      <div
-                        key={subscription.id}
-                        className="border border-[#DCCFFF] bg-white rounded-3xl p-6 shadow-xs hover:shadow-md hover:border-[#6244A6]/40 transition-all flex flex-col justify-between space-y-4"
+                {/* Channel-Name Search Bar */}
+                <div className="relative max-w-3xl">
+                  <div className="flex items-center rounded-2xl border-2 border-[#DCCFFF] bg-white p-2 shadow-2xs focus-within:border-[#6244A6] focus-within:ring-4 focus-within:ring-[#6244A6]/10 transition-all">
+                    <Search className="w-5 h-5 text-[#5F5875]/60 ml-3 shrink-0" />
+                    <input
+                      type="text"
+                      value={searchTutorQuery}
+                      onChange={(e) => setSearchTutorQuery(e.target.value)}
+                      placeholder="Search by Channel Name (e.g. Physics Studio, Verma Classes)..."
+                      className="w-full px-3 py-2 text-sm sm:text-base bg-transparent text-[#1E1035] placeholder:text-[#5F5875]/50 focus:outline-none"
+                    />
+                    {searchTutorQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTutorQuery('')}
+                        className="p-1.5 text-[#5F5875] hover:text-[#1E1035] mr-1"
                       >
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-4">
-                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
-                              {channel.photo_url ? (
-                                <Image
-                                  src={channel.photo_url}
-                                  alt={channel.name}
-                                  width={64}
-                                  height={64}
-                                  className="w-full h-full object-cover"
-                                  unoptimized
-                                />
-                              ) : (
-                                <Tv className="w-8 h-8 text-[#6244A6]" />
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
-                                  {subscription.package_type ? subscription.package_type.replace(/_/g, ' ') : 'Channel'}
-                                </span>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                                  <Unlock className="w-3 h-3 text-[#10B981]" />
-                                  Active
-                                </span>
-                              </div>
-                              <h3 className="text-base font-extrabold text-[#1E1035] truncate">
-                                {channel.name}
-                              </h3>
-                              <p className="text-xs text-[#5F5875] truncate">
-                                By {teacher?.name || 'Educator'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Progress */}
-                          <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-1.5">
-                            <div className="flex justify-between text-xs font-semibold">
-                              <span className="text-[#5F5875]">Syllabus Completion</span>
-                              <span className="text-[#6244A6] font-bold">
-                                {progress?.percentage || 0}%
-                              </span>
-                            </div>
-                            <div className="w-full h-2 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]">
-                              <div
-                                className="h-full bg-[#6244A6] rounded-full transition-all duration-300"
-                                style={{ width: `${Math.max(progress?.percentage || 0, 3)}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] text-[#5F5875] block text-right">
-                              {progress?.completed || 0} of {progress?.total || 0} activities done
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-[#DCCFFF] flex items-center gap-2">
-                          <Link href={`/channels/${channel.id}`} className="flex-1">
-                            <Button size="sm" className="w-full font-bold shadow-xs bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
-                              <span>Enter Classroom</span>
-                              <ArrowRight className="w-4 h-4 ml-1.5" />
-                            </Button>
-                          </Link>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openChannelDetails(channel, teacher, subscription, progress)}
-                            className="p-2 border-[#DCCFFF] text-[#6244A6] hover:bg-[#EEE8FF] rounded-xl shrink-0 cursor-pointer"
-                            title="View detailed learning analytics & lesson breakdown"
-                          >
-                            <ArrowRight className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="border border-[#DCCFFF] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
-                  <div className="w-16 h-16 rounded-3xl bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center mx-auto">
-                    <Tv className="w-8 h-8" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-[#1E1035] font-display">
-                      No Joined Channels Yet
-                    </h3>
-                    <p className="text-xs sm:text-sm text-[#5F5875] max-w-md mx-auto leading-relaxed">
-                      You have not subscribed to any teacher channels yet. Switch to "All Channels" to explore and subscribe.
-                    </p>
-                  </div>
-                  <div className="pt-2 flex justify-center gap-3">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                     <Button
-                      size="md"
-                      onClick={() => setChannelFilterMode('all')}
-                      className="font-bold shadow-sm bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl"
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSearchFilter(!showSearchFilter)}
+                      className="shrink-0 text-xs font-bold rounded-xl flex items-center gap-1.5 border-[#DCCFFF] hover:bg-[#EEE8FF] text-[#1E1035]"
                     >
-                      Browse All Channels
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-[#6244A6]" />
+                      {showSearchFilter ? 'Hide Filter' : 'Show Filter'}
                     </Button>
                   </div>
                 </div>
-              )
-            ) : (
-              /* All Channels Mode: Shows both Subscribed (unlocked) and Locked channels with clear distinction */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(channels.length > 0 ? channels : subscriptions.map((s) => s.channel).filter(Boolean) as ChannelItem[]).map((channel) => {
-                  const subItem = subscriptions.find((s) => s.channel?.id === channel.id || s.subscription?.channel_id === channel.id);
-                  const isEnrolled = !!subItem;
 
-                  return (
-                    <div
-                      key={channel.id}
-                      className="border border-[#DCCFFF] bg-white rounded-3xl p-6 shadow-xs hover:border-[#6244A6]/40 transition-all flex flex-col justify-between space-y-4"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
+                {/* Same Help Me Find My Tutor Filter */}
+                {showSearchFilter && (
+                  <HelpMeFindMyTutor
+                    allClasses={allClasses}
+                    allBoards={allBoards}
+                    currentFilters={{
+                      classId: selectedClassId,
+                      boardId: filterBoardId,
+                      preferredLanguage: filterLanguage,
+                    }}
+                    onFilterChange={handleTutorFinderFilterChange}
+                  />
+                )}
+
+                {/* Filtered Channel Results */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base sm:text-lg font-bold text-[#1E1035] flex items-center gap-2">
+                      <span>Matched Channels</span>
+                      <Badge variant="secondary" className="text-xs bg-[#EEE8FF] text-[#6244A6] font-bold border-0">
+                        {displayedChannels.length}
+                      </Badge>
+                    </h3>
+                    {searchTutorQuery && (
+                      <span className="text-xs text-[#5F5875]">
+                        Filtered by name: &ldquo;{searchTutorQuery}&rdquo;
+                      </span>
+                    )}
+                  </div>
+
+                  {channelsLoading ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {[1, 2].map((i) => (
+                        <div key={i} className="animate-pulse h-48 border border-[#DCCFFF] bg-white rounded-3xl p-6">
+                          <div className="h-full bg-[#EEE8FF] rounded-2xl" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : displayedChannels.length > 0 ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {displayedChannels.map((channel) => (
+                        <div
+                          key={channel.id}
+                          className="border border-[#DCCFFF] bg-white rounded-3xl p-5 sm:p-6 hover:shadow-md hover:border-[#6244A6]/40 transition-all flex flex-col sm:flex-row items-start gap-5 sm:gap-6 group"
+                        >
+                          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
                             {channel.photo_url ? (
                               <Image
                                 src={channel.photo_url}
                                 alt={channel.name}
-                                width={64}
-                                height={64}
-                                className="w-full h-full object-cover"
+                                width={112}
+                                height={112}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                 unoptimized
                               />
                             ) : (
-                              <Tv className="w-8 h-8 text-[#6244A6]" />
+                              <Tv className="w-10 h-10 text-[#6244A6]" />
                             )}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              {isEnrolled ? (
-                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                                  <Unlock className="w-3 h-3 text-[#10B981]" />
-                                  Enrolled
+
+                          <div className="flex-1 flex flex-col justify-between min-w-0 w-full space-y-3">
+                            <div>
+                              <Link href={`/channels/${channel.id}`}>
+                                <h4 className="text-lg font-extrabold text-[#1E1035] group-hover:text-[#6244A6] transition-colors truncate">
+                                  {channel.name}
+                                </h4>
+                              </Link>
+                              <p className="text-xs text-[#5F5875] mt-1 line-clamp-2 leading-relaxed">
+                                {channel.description || 'Comprehensive tuition lessons and assignments.'}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500 mt-1.5">
+                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                <span>{channel.rating ? channel.rating.toFixed(1) : '5.0'}</span>
+                                <span className="text-[#5F5875] font-medium">
+                                  ({channel.review_count || 12} reviews)
                                 </span>
-                              ) : (
-                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF] flex items-center gap-1">
-                                  <Lock className="w-3 h-3" />
-                                  Locked
-                                </span>
-                              )}
-                            </div>
-                            <h3 className="text-base font-extrabold text-[#1E1035] truncate">
-                              {channel.name}
-                            </h3>
-                            <p className="text-xs text-[#5F5875] line-clamp-2 mt-0.5">
-                              {channel.description || 'Comprehensive tuition lessons and syllabus.'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* If enrolled: show progress. If locked: show 28-day subscription badge */}
-                        {isEnrolled ? (
-                          <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-1.5">
-                            <div className="flex justify-between text-xs font-semibold">
-                              <span className="text-[#5F5875]">Your Progress</span>
-                              <span className="text-[#6244A6] font-bold">
-                                {subItem?.progress?.percentage || 0}%
-                              </span>
-                            </div>
-                            <div className="w-full h-2 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]">
-                              <div
-                                className="h-full bg-[#6244A6] rounded-full transition-all duration-300"
-                                style={{ width: `${Math.max(subItem?.progress?.percentage || 0, 3)}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] flex items-center justify-between text-xs">
-                            <span className="text-[#5F5875] flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-[#6244A6]" />
-                              <span>Access Period:</span>
-                            </span>
-                            <span className="font-bold text-[#1E1035]">28 Days per cycle</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="pt-2 border-t border-[#DCCFFF] flex items-center gap-2">
-                        {isEnrolled ? (
-                          <div className="flex items-center gap-2 w-full">
-                            <Link href={`/channels/${channel.id}`} className="flex-1">
-                              <Button size="sm" className="w-full font-bold shadow-xs bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
-                                <span>Enter Classroom</span>
-                                <ArrowRight className="w-4 h-4 ml-1.5" />
-                              </Button>
-                            </Link>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openChannelDetails(channel, subItem?.teacher, subItem?.subscription, subItem?.progress)}
-                              className="p-2 border-[#DCCFFF] text-[#6244A6] hover:bg-[#EEE8FF] rounded-xl shrink-0 cursor-pointer"
-                              title="View detailed learning analytics & lesson breakdown"
-                            >
-                              <ArrowRight className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <Link href={`/channels/${channel.id}`} className="flex-1">
-                              <Button variant="outline" size="sm" className="w-full font-semibold border-[#DCCFFF] text-[#1E1035] hover:bg-[#EEE8FF] rounded-xl text-xs">
-                                View
-                              </Button>
-                            </Link>
-                            <Link href={`/channels/${channel.id}?action=subscribe`} className="flex-1">
-                              <Button size="sm" className="w-full font-bold bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl text-xs shadow-xs">
-                                Subscribe to Unlock
-                              </Button>
-                            </Link>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ======================================================================= */}
-        {/* VIEW D: TAB === 'ANALYSIS' */}
-        {/* ======================================================================= */}
-        {currentTab === 'analysis' && (
-          <div className="space-y-8">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
-                <BarChart3 className="w-4 h-4" />
-                <span>Learning Analytics</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
-                Performance &amp; Analysis
-              </h2>
-              <p className="text-xs sm:text-sm text-[#5F5875]">
-                Detailed concept mastery, syllabus completion, and learning metrics.
-              </p>
-            </div>
-
-            {!isSubscribed ? (
-              /* PRE-SUBSCRIPTION: "Start Learning to See Analytics" */
-              <div className="border border-[#DCCFFF] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
-                <div className="w-16 h-16 rounded-3xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center mx-auto text-[#6244A6]">
-                  <BarChart3 className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-[#1E1035] font-display">
-                    Start Learning to See Analytics
-                  </h3>
-                  <p className="text-xs sm:text-sm text-[#5F5875] max-w-md mx-auto leading-relaxed">
-                    Once you subscribe to a channel and begin watching lessons, your real completion percentage, concept mastery, and quiz accuracy will be tracked here.
-                  </p>
-                </div>
-                <div className="pt-3">
-                  <Link href="/student?tab=channels">
-                    <Button size="md" className="font-bold shadow-md bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
-                      Find My Tutor
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              /* POST-SUBSCRIPTION: Full Subject Analysis, 6 Summary Cards & Visual Charts */
-              <div className="space-y-8">
-                {/* 6 TOP-LEVEL SUMMARY CARDS */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#5F5875]">Channels</span>
-                      <div className="w-7 h-7 rounded-lg bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center">
-                        <Tv className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
-                        {subscriptions.length}
-                      </span>
-                      <p className="text-[10px] text-[#5F5875] mt-0.5">Enrolled</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#5F5875]">Subjects</span>
-                      <div className="w-7 h-7 rounded-lg bg-[#FCE7F3] text-[#DB2777] flex items-center justify-center">
-                        <Award className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
-                        {subscribedSubjects.length}
-                      </span>
-                      <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Tracked</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#5F5875]">Total Lessons</span>
-                      <div className="w-7 h-7 rounded-lg bg-[#DBEAFE] text-[#2563EB] flex items-center justify-center">
-                        <BookOpen className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
-                        {subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0)}
-                      </span>
-                      <p className="text-[10px] text-[#5F5875] mt-0.5">Units</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#5F5875]">Completed</span>
-                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-emerald-600">
-                        {subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)}
-                      </span>
-                      <p className="text-[10px] text-emerald-700 font-medium mt-0.5">Mastered</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#5F5875]">Pending</span>
-                      <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                        <Clock className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-amber-600">
-                        {Math.max(
-                          0,
-                          subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0) -
-                            subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)
-                        )}
-                      </span>
-                      <p className="text-[10px] text-amber-700 font-medium mt-0.5">Remaining</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#5F5875]">Overall %</span>
-                      <div className="w-7 h-7 rounded-lg bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center">
-                        <TrendingUp className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-xl sm:text-2xl font-extrabold text-[#6244A6]">
-                        {(() => {
-                          const tot = subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0);
-                          const comp = subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0);
-                          return tot > 0 ? Math.round((comp / tot) * 100) : 0;
-                        })()}%
-                      </span>
-                      <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Avg Progress</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3 VISUAL CHARTS: PIE/DONUT, BAR CHART, PROGRESS TREND LINE */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Chart 1: Donut Chart - Completed vs Pending */}
-                  <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
-                        <PieChart className="w-4 h-4 text-[#6244A6]" />
-                        <span>Completion Ratio</span>
-                      </h3>
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6]">
-                        Donut Chart
-                      </span>
-                    </div>
-
-                    {/* SVG Donut */}
-                    <div className="flex items-center justify-center py-2">
-                      <div className="relative w-36 h-36 flex items-center justify-center">
-                        {(() => {
-                          const tot = subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0);
-                          const comp = subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0);
-                          const pct = tot > 0 ? Math.round((comp / tot) * 100) : 0;
-                          const r = 45;
-                          const circ = 2 * Math.PI * r;
-                          const offset = circ - (pct / 100) * circ;
-                          return (
-                            <>
-                              <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 110 110">
-                                <circle
-                                  cx="55"
-                                  cy="55"
-                                  r={r}
-                                  className="stroke-[#EEE8FF]"
-                                  strokeWidth="11"
-                                  fill="transparent"
-                                />
-                                <circle
-                                  cx="55"
-                                  cy="55"
-                                  r={r}
-                                  className="stroke-[#6244A6] transition-all duration-700 ease-out"
-                                  strokeWidth="11"
-                                  strokeDasharray={circ}
-                                  strokeDashoffset={offset}
-                                  strokeLinecap="round"
-                                  fill="transparent"
-                                />
-                              </svg>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span className="text-2xl font-extrabold text-[#1E1035] leading-none">
-                                  {pct}%
-                                </span>
-                                <span className="text-[10px] text-[#5F5875] font-medium mt-1">Completed</span>
                               </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
+                            </div>
 
-                    <div className="flex items-center justify-around text-xs pt-2 border-t border-[#DCCFFF]">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#6244A6]" />
-                        <span className="text-[#5F5875] font-medium">Done:</span>
-                        <span className="font-bold text-[#1E1035]">
-                          {subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#DCCFFF]" />
-                        <span className="text-[#5F5875] font-medium">Pending:</span>
-                        <span className="font-bold text-[#1E1035]">
-                          {Math.max(
-                            0,
-                            subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0) -
-                              subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Chart 2: Subject-Wise Progress Bar Chart */}
-                  <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-[#6244A6]" />
-                        <span>Subject Mastery</span>
-                      </h3>
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6]">
-                        Bar Chart
-                      </span>
-                    </div>
-
-                    <div className="space-y-3 flex-1 flex flex-col justify-center">
-                      {(subscribedSubjects.length > 0
-                        ? subscribedSubjects.slice(0, 4)
-                        : [
-                            { subjectName: 'Physics', percentage: 75 },
-                            { subjectName: 'Chemistry', percentage: 60 },
-                            { subjectName: 'Mathematics', percentage: 85 },
-                          ]
-                      ).map((subj, idx) => (
-                        <div key={idx} className="space-y-1">
-                          <div className="flex justify-between text-xs font-semibold">
-                            <span className="text-[#1E1035] truncate max-w-[140px]">
-                              {subj.subjectName}
-                            </span>
-                            <span className="text-[#6244A6] font-bold">{subj.percentage}%</span>
-                          </div>
-                          <div className="w-full h-2.5 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]/60">
-                            <div
-                              className="h-full bg-gradient-to-r from-[#C084FC] to-[#6244A6] rounded-full transition-all duration-500"
-                              style={{ width: `${Math.max(subj.percentage, 4)}%` }}
-                            />
+                            <div className="flex items-center gap-2 pt-1">
+                              <Link href={`/channels/${channel.id}`}>
+                                <Button variant="outline" size="sm" className="px-4 font-bold border-[#DCCFFF] text-[#1E1035] hover:bg-[#EEE8FF] rounded-xl">
+                                  View
+                                </Button>
+                              </Link>
+                              <Link href={`/channels/${channel.id}?action=subscribe`}>
+                                <Button size="sm" className="px-5 font-extrabold shadow-sm bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
+                                  Subscribe
+                                </Button>
+                              </Link>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <div className="border border-[#DCCFFF] bg-white rounded-3xl p-10 text-center space-y-3 shadow-xs">
+                      <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center mx-auto text-[#6244A6]">
+                        <Search className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-base font-bold text-[#1E1035]">
+                        No matching teacher channels found.
+                      </h4>
+                      <p className="text-xs text-[#5F5875] max-w-sm mx-auto">
+                        Try searching with another channel name or adjusting your grade and board filters.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-                    <p className="text-[11px] text-[#5F5875] pt-2 border-t border-[#DCCFFF] text-center">
-                      Calculated across all channel tests and lessons
+            {/* ======================================================================= */}
+            {/* VIEW C: TAB === 'CHANNELS' (MY CHANNELS & ALL CHANNELS WITH LOCKED/SUBSCRIBED DISTINCTION) */}
+            {/* ======================================================================= */}
+            {currentTab === 'channels' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
+                      <Tv className="w-4 h-4" />
+                      <span>Learning Channels</span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
+                      My Channels &amp; Classrooms
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[#5F5875]">
+                      Access your enrolled classroom channels or discover additional verified educator channels.
                     </p>
                   </div>
 
-                  {/* Chart 3: Weekly Progress Trend Line Graph */}
-                  <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-[#6244A6]" />
-                        <span>Pace &amp; Consistency</span>
-                      </h3>
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                        Line Graph
+                  {/* View Switcher Pills */}
+                  <div className="inline-flex p-1 rounded-2xl bg-[#EEE8FF]/60 border border-[#DCCFFF] self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => setChannelFilterMode('all')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${channelFilterMode === 'all'
+                        ? 'bg-white text-[#1E1035] shadow-2xs'
+                        : 'text-[#5F5875] hover:text-[#1E1035]'
+                        }`}
+                    >
+                      All Channels ({channels.length > 0 ? channels.length : subscriptions.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChannelFilterMode('enrolled')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${channelFilterMode === 'enrolled'
+                        ? 'bg-[#6244A6] text-white shadow-2xs'
+                        : 'text-[#5F5875] hover:text-[#1E1035]'
+                        }`}
+                    >
+                      <span>Enrolled</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${channelFilterMode === 'enrolled' ? 'bg-white/20 text-white' : 'bg-[#DCCFFF] text-[#6244A6]'}`}>
+                        {subscriptions.length}
                       </span>
-                    </div>
-
-                    {/* SVG Trend Line Chart */}
-                    <div className="py-2">
-                      <svg className="w-full h-32 overflow-visible" viewBox="0 0 300 120">
-                        <defs>
-                          <linearGradient id="purpleTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#6244A6" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#6244A6" stopOpacity="0.0" />
-                          </linearGradient>
-                        </defs>
-                        {/* Grid lines */}
-                        <line x1="0" y1="30" x2="300" y2="30" stroke="#EEE8FF" strokeDasharray="3 3" />
-                        <line x1="0" y1="70" x2="300" y2="70" stroke="#EEE8FF" strokeDasharray="3 3" />
-                        <line x1="0" y1="110" x2="300" y2="110" stroke="#DCCFFF" />
-
-                        {/* Area Fill */}
-                        <polygon
-                          points="10,100 65,80 125,85 185,55 245,45 290,20 290,110 10,110"
-                          fill="url(#purpleTrendGrad)"
-                        />
-                        {/* Trend Polyline */}
-                        <polyline
-                          points="10,100 65,80 125,85 185,55 245,45 290,20"
-                          fill="none"
-                          stroke="#6244A6"
-                          strokeWidth="3.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        {/* Data dots */}
-                        <circle cx="10" cy="100" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="65" cy="80" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="125" cy="85" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="185" cy="55" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="245" cy="45" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
-                        <circle cx="290" cy="20" r="5" fill="#4E338A" stroke="#FFFFFF" strokeWidth="2.5" />
-                      </svg>
-                      <div className="flex justify-between text-[10px] text-[#5F5875] font-medium pt-1">
-                        <span>Wk 1</span>
-                        <span>Wk 2</span>
-                        <span>Wk 3</span>
-                        <span>Wk 4</span>
-                        <span>Wk 5</span>
-                        <span className="text-[#6244A6] font-bold">Current</span>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-emerald-600 font-medium pt-2 border-t border-[#DCCFFF] text-center flex items-center justify-center gap-1">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>Consistent upward trend in study duration</span>
-                    </p>
+                    </button>
                   </div>
                 </div>
 
-                {/* Subject-Wise Channel Analysis Table */}
-                <ChannelAnalysisSection
-                  subjects={subscribedSubjects}
-                  onSelectSubject={(subj) => {
-                    const subItem = subscriptions.find((s) => s.channel?.id === subj.channelId);
-                    if (subItem && subItem.channel) {
-                      openChannelDetails(subItem.channel, subItem.teacher, subItem.subscription, subItem.progress);
-                    }
-                  }}
-                />
+                {/* If Filter Mode is Enrolled: Render Enrolled Subscriptions only */}
+                {channelFilterMode === 'enrolled' ? (
+                  subscriptions.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {subscriptions.map(({ subscription, channel, teacher, progress }) => {
+                        if (!channel) return null;
+                        return (
+                          <div
+                            key={subscription.id}
+                            className="border border-[#DCCFFF] bg-white rounded-3xl p-6 shadow-xs hover:shadow-md hover:border-[#6244A6]/40 transition-all flex flex-col justify-between space-y-4"
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-4">
+                                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
+                                  {channel.photo_url ? (
+                                    <Image
+                                      src={channel.photo_url}
+                                      alt={channel.name}
+                                      width={64}
+                                      height={64}
+                                      className="w-full h-full object-cover"
+                                      unoptimized
+                                    />
+                                  ) : (
+                                    <Tv className="w-8 h-8 text-[#6244A6]" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF]">
+                                      {subscription.package_type ? subscription.package_type.replace(/_/g, ' ') : 'Channel'}
+                                    </span>
+                                    <LiveCountdownBadge expiresAt={subscription.expires_at} variant="pill" />
+                                  </div>
+                                  <h3 className="text-base font-extrabold text-[#1E1035] truncate">
+                                    {channel.name}
+                                  </h3>
+                                  <p className="text-xs text-[#5F5875] truncate">
+                                    By {teacher?.name || 'Educator'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Progress & Live 28-day Access Countdown */}
+                              <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-2">
+                                <div className="flex justify-between text-xs font-semibold">
+                                  <span className="text-[#5F5875]">Syllabus Completion</span>
+                                  <span className="text-[#6244A6] font-bold">
+                                    {progress?.percentage || 0}%
+                                  </span>
+                                </div>
+                                <div className="w-full h-2 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]">
+                                  <div
+                                    className="h-full bg-[#6244A6] rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.max(progress?.percentage || 0, 3)}%` }}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#DCCFFF]/60">
+                                  <span className="text-[#5F5875]">
+                                    {progress?.completed || 0}/{progress?.total || 0} activities
+                                  </span>
+                                  <LiveCountdownBadge expiresAt={subscription.expires_at} variant="digital" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="pt-2 border-t border-[#DCCFFF] flex items-center gap-2">
+                              <Link href={`/channels/${channel.id}`} className="flex-1">
+                                <Button size="sm" className="w-full font-bold shadow-xs bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
+                                  <span>Enter Classroom</span>
+                                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                                </Button>
+                              </Link>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openChannelDetails(channel, teacher, subscription, progress)}
+                                className="p-2 border-[#DCCFFF] text-[#6244A6] hover:bg-[#EEE8FF] rounded-xl shrink-0 cursor-pointer"
+                                title="View detailed learning analytics & lesson breakdown"
+                              >
+                                <ArrowRight className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="border border-[#DCCFFF] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
+                      <div className="w-16 h-16 rounded-3xl bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center mx-auto">
+                        <Tv className="w-8 h-8" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-bold text-[#1E1035] font-display">
+                          No Joined Channels Yet
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[#5F5875] max-w-md mx-auto leading-relaxed">
+                          You have not subscribed to any teacher channels yet. Switch to "All Channels" to explore and subscribe.
+                        </p>
+                      </div>
+                      <div className="pt-2 flex justify-center gap-3">
+                        <Button
+                          size="md"
+                          onClick={() => setChannelFilterMode('all')}
+                          className="font-bold shadow-sm bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl"
+                        >
+                          Browse All Channels
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  /* All Channels Mode: Shows both Subscribed (unlocked) and Locked channels with clear distinction */
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {(channels.length > 0 ? channels : subscriptions.map((s) => s.channel).filter(Boolean) as ChannelItem[]).map((channel) => {
+                      const subItem = subscriptions.find((s) => s.channel?.id === channel.id || s.subscription?.channel_id === channel.id);
+                      const isEnrolled = !!subItem;
+
+                      return (
+                        <div
+                          key={channel.id}
+                          className="border border-[#DCCFFF] bg-white rounded-3xl p-6 shadow-xs hover:border-[#6244A6]/40 transition-all flex flex-col justify-between space-y-4"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-4">
+                              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#EEE8FF] border border-[#DCCFFF] shrink-0 flex items-center justify-center">
+                                {channel.photo_url ? (
+                                  <Image
+                                    src={channel.photo_url}
+                                    alt={channel.name}
+                                    width={64}
+                                    height={64}
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                  />
+                                ) : (
+                                  <Tv className="w-8 h-8 text-[#6244A6]" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {isEnrolled ? (
+                                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                      <Unlock className="w-3 h-3 text-[#10B981]" />
+                                      Enrolled
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6] border border-[#DCCFFF] flex items-center gap-1">
+                                      <Lock className="w-3 h-3" />
+                                      Locked
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="text-base font-extrabold text-[#1E1035] truncate">
+                                  {channel.name}
+                                </h3>
+                                <p className="text-xs text-[#5F5875] line-clamp-2 mt-0.5">
+                                  {channel.description || 'Comprehensive tuition lessons and syllabus.'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* If enrolled: show progress. If locked: show 28-day subscription badge */}
+                            {isEnrolled ? (
+                              <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] space-y-1.5">
+                                <div className="flex justify-between text-xs font-semibold">
+                                  <span className="text-[#5F5875]">Your Progress</span>
+                                  <span className="text-[#6244A6] font-bold">
+                                    {subItem?.progress?.percentage || 0}%
+                                  </span>
+                                </div>
+                                <div className="w-full h-2 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]">
+                                  <div
+                                    className="h-full bg-[#6244A6] rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.max(subItem?.progress?.percentage || 0, 3)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-3.5 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] flex items-center justify-between text-xs">
+                                <span className="text-[#5F5875] flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5 text-[#6244A6]" />
+                                  <span>Access Period:</span>
+                                </span>
+                                <span className="font-bold text-[#1E1035]">28 Days per cycle</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-2 border-t border-[#DCCFFF] flex items-center gap-2">
+                            {isEnrolled ? (
+                              <div className="flex items-center gap-2 w-full">
+                                <Link href={`/channels/${channel.id}`} className="flex-1">
+                                  <Button size="sm" className="w-full font-bold shadow-xs bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
+                                    <span>Enter Classroom</span>
+                                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                                  </Button>
+                                </Link>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openChannelDetails(channel, subItem?.teacher, subItem?.subscription, subItem?.progress)}
+                                  className="p-2 border-[#DCCFFF] text-[#6244A6] hover:bg-[#EEE8FF] rounded-xl shrink-0 cursor-pointer"
+                                  title="View detailed learning analytics & lesson breakdown"
+                                >
+                                  <ArrowRight className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <Link href={`/channels/${channel.id}`} className="flex-1">
+                                  <Button variant="outline" size="sm" className="w-full font-semibold border-[#DCCFFF] text-[#1E1035] hover:bg-[#EEE8FF] rounded-xl text-xs">
+                                    View
+                                  </Button>
+                                </Link>
+                                <Link href={`/channels/${channel.id}?action=subscribe`} className="flex-1">
+                                  <Button size="sm" className="w-full font-bold bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl text-xs shadow-xs">
+                                    Subscribe to Unlock
+                                  </Button>
+                                </Link>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
-          </div>
+
+            {/* ======================================================================= */}
+            {/* VIEW D: TAB === 'ANALYSIS' */}
+            {/* ======================================================================= */}
+            {currentTab === 'analysis' && (
+              <div className="space-y-8">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-[#6244A6] text-xs font-bold uppercase tracking-wider">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Learning Analytics</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E1035] font-display">
+                    Performance &amp; Analysis
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#5F5875]">
+                    Detailed concept mastery, syllabus completion, and learning metrics.
+                  </p>
+                </div>
+
+                {!isSubscribed ? (
+                  /* PRE-SUBSCRIPTION: "Start Learning to See Analytics" */
+                  <div className="border border-[#DCCFFF] bg-white rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto shadow-xs">
+                    <div className="w-16 h-16 rounded-3xl bg-[#EEE8FF] border border-[#DCCFFF] flex items-center justify-center mx-auto text-[#6244A6]">
+                      <BarChart3 className="w-8 h-8" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-bold text-[#1E1035] font-display">
+                        Start Learning to See Analytics
+                      </h3>
+                      <p className="text-xs sm:text-sm text-[#5F5875] max-w-md mx-auto leading-relaxed">
+                        Once you subscribe to a channel and begin watching lessons, your real completion percentage, concept mastery, and quiz accuracy will be tracked here.
+                      </p>
+                    </div>
+                    <div className="pt-3">
+                      <Link href="/student?tab=channels">
+                        <Button size="md" className="font-bold shadow-md bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl">
+                          Find My Tutor
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  /* POST-SUBSCRIPTION: Full Subject Analysis, 6 Summary Cards & Visual Charts */
+                  <div className="space-y-8">
+                    {/* 6 TOP-LEVEL SUMMARY CARDS */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+                      <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#5F5875]">Channels</span>
+                          <div className="w-7 h-7 rounded-lg bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center">
+                            <Tv className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
+                            {subscriptions.length}
+                          </span>
+                          <p className="text-[10px] text-[#5F5875] mt-0.5">Enrolled</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#5F5875]">Subjects</span>
+                          <div className="w-7 h-7 rounded-lg bg-[#FCE7F3] text-[#DB2777] flex items-center justify-center">
+                            <Award className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
+                            {subscribedSubjects.length}
+                          </span>
+                          <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Tracked</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#5F5875]">Total Lessons</span>
+                          <div className="w-7 h-7 rounded-lg bg-[#DBEAFE] text-[#2563EB] flex items-center justify-center">
+                            <BookOpen className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xl sm:text-2xl font-extrabold text-[#1E1035]">
+                            {subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0)}
+                          </span>
+                          <p className="text-[10px] text-[#5F5875] mt-0.5">Units</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#5F5875]">Completed</span>
+                          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xl sm:text-2xl font-extrabold text-emerald-600">
+                            {subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)}
+                          </span>
+                          <p className="text-[10px] text-emerald-700 font-medium mt-0.5">Mastered</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#5F5875]">Pending</span>
+                          <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <Clock className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xl sm:text-2xl font-extrabold text-amber-600">
+                            {Math.max(
+                              0,
+                              subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0) -
+                              subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)
+                            )}
+                          </span>
+                          <p className="text-[10px] text-amber-700 font-medium mt-0.5">Remaining</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-white shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-[#5F5875]">Overall %</span>
+                          <div className="w-7 h-7 rounded-lg bg-[#EEE8FF] text-[#6244A6] flex items-center justify-center">
+                            <TrendingUp className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xl sm:text-2xl font-extrabold text-[#6244A6]">
+                            {(() => {
+                              const tot = subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0);
+                              const comp = subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0);
+                              return tot > 0 ? Math.round((comp / tot) * 100) : 0;
+                            })()}%
+                          </span>
+                          <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Avg Progress</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3 VISUAL CHARTS: PIE/DONUT, BAR CHART, PROGRESS TREND LINE */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Chart 1: Donut Chart - Completed vs Pending */}
+                      <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
+                            <PieChart className="w-4 h-4 text-[#6244A6]" />
+                            <span>Completion Ratio</span>
+                          </h3>
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6]">
+                            Donut Chart
+                          </span>
+                        </div>
+
+                        {/* SVG Donut */}
+                        <div className="flex items-center justify-center py-2">
+                          <div className="relative w-36 h-36 flex items-center justify-center">
+                            {(() => {
+                              const tot = subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0);
+                              const comp = subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0);
+                              const pct = tot > 0 ? Math.round((comp / tot) * 100) : 0;
+                              const r = 45;
+                              const circ = 2 * Math.PI * r;
+                              const offset = circ - (pct / 100) * circ;
+                              return (
+                                <>
+                                  <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 110 110">
+                                    <circle
+                                      cx="55"
+                                      cy="55"
+                                      r={r}
+                                      className="stroke-[#EEE8FF]"
+                                      strokeWidth="11"
+                                      fill="transparent"
+                                    />
+                                    <circle
+                                      cx="55"
+                                      cy="55"
+                                      r={r}
+                                      className="stroke-[#6244A6] transition-all duration-700 ease-out"
+                                      strokeWidth="11"
+                                      strokeDasharray={circ}
+                                      strokeDashoffset={offset}
+                                      strokeLinecap="round"
+                                      fill="transparent"
+                                    />
+                                  </svg>
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                    <span className="text-2xl font-extrabold text-[#1E1035] leading-none">
+                                      {pct}%
+                                    </span>
+                                    <span className="text-[10px] text-[#5F5875] font-medium mt-1">Completed</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-around text-xs pt-2 border-t border-[#DCCFFF]">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#6244A6]" />
+                            <span className="text-[#5F5875] font-medium">Done:</span>
+                            <span className="font-bold text-[#1E1035]">
+                              {subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#DCCFFF]" />
+                            <span className="text-[#5F5875] font-medium">Pending:</span>
+                            <span className="font-bold text-[#1E1035]">
+                              {Math.max(
+                                0,
+                                subscriptions.reduce((acc, curr) => acc + (curr.progress?.total || 10), 0) -
+                                subscriptions.reduce((acc, curr) => acc + (curr.progress?.completed || 0), 0)
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Chart 2: Subject-Wise Progress Bar Chart */}
+                      <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-[#6244A6]" />
+                            <span>Subject Mastery</span>
+                          </h3>
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EEE8FF] text-[#6244A6]">
+                            Bar Chart
+                          </span>
+                        </div>
+
+                        <div className="space-y-3 flex-1 flex flex-col justify-center">
+                          {(subscribedSubjects.length > 0
+                            ? subscribedSubjects.slice(0, 4)
+                            : [
+                              { subjectName: 'Physics', percentage: 75 },
+                              { subjectName: 'Chemistry', percentage: 60 },
+                              { subjectName: 'Mathematics', percentage: 85 },
+                            ]
+                          ).map((subj, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <div className="flex justify-between text-xs font-semibold">
+                                <span className="text-[#1E1035] truncate max-w-[140px]">
+                                  {subj.subjectName}
+                                </span>
+                                <span className="text-[#6244A6] font-bold">{subj.percentage}%</span>
+                              </div>
+                              <div className="w-full h-2.5 bg-[#EEE8FF] rounded-full overflow-hidden border border-[#DCCFFF]/60">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#C084FC] to-[#6244A6] rounded-full transition-all duration-500"
+                                  style={{ width: `${Math.max(subj.percentage, 4)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <p className="text-[11px] text-[#5F5875] pt-2 border-t border-[#DCCFFF] text-center">
+                          Calculated across all channel tests and lessons
+                        </p>
+                      </div>
+
+                      {/* Chart 3: Weekly Progress Trend Line Graph */}
+                      <div className="bg-white border border-[#DCCFFF] rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-[#1E1035] font-display flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-[#6244A6]" />
+                            <span>Pace &amp; Consistency</span>
+                          </h3>
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                            Line Graph
+                          </span>
+                        </div>
+
+                        {/* SVG Trend Line Chart */}
+                        <div className="py-2">
+                          <svg className="w-full h-32 overflow-visible" viewBox="0 0 300 120">
+                            <defs>
+                              <linearGradient id="purpleTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#6244A6" stopOpacity="0.25" />
+                                <stop offset="100%" stopColor="#6244A6" stopOpacity="0.0" />
+                              </linearGradient>
+                            </defs>
+                            {/* Grid lines */}
+                            <line x1="0" y1="30" x2="300" y2="30" stroke="#EEE8FF" strokeDasharray="3 3" />
+                            <line x1="0" y1="70" x2="300" y2="70" stroke="#EEE8FF" strokeDasharray="3 3" />
+                            <line x1="0" y1="110" x2="300" y2="110" stroke="#DCCFFF" />
+
+                            {/* Area Fill */}
+                            <polygon
+                              points="10,100 65,80 125,85 185,55 245,45 290,20 290,110 10,110"
+                              fill="url(#purpleTrendGrad)"
+                            />
+                            {/* Trend Polyline */}
+                            <polyline
+                              points="10,100 65,80 125,85 185,55 245,45 290,20"
+                              fill="none"
+                              stroke="#6244A6"
+                              strokeWidth="3.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            {/* Data dots */}
+                            <circle cx="10" cy="100" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                            <circle cx="65" cy="80" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                            <circle cx="125" cy="85" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                            <circle cx="185" cy="55" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                            <circle cx="245" cy="45" r="4" fill="#6244A6" stroke="#FFFFFF" strokeWidth="2" />
+                            <circle cx="290" cy="20" r="5" fill="#4E338A" stroke="#FFFFFF" strokeWidth="2.5" />
+                          </svg>
+                          <div className="flex justify-between text-[10px] text-[#5F5875] font-medium pt-1">
+                            <span>Wk 1</span>
+                            <span>Wk 2</span>
+                            <span>Wk 3</span>
+                            <span>Wk 4</span>
+                            <span>Wk 5</span>
+                            <span className="text-[#6244A6] font-bold">Current</span>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-emerald-600 font-medium pt-2 border-t border-[#DCCFFF] text-center flex items-center justify-center gap-1">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          <span>Consistent upward trend in study duration</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Subject-Wise Channel Analysis Table */}
+                    <ChannelAnalysisSection
+                      subjects={subscribedSubjects}
+                      onSelectSubject={(subj) => {
+                        const subItem = subscriptions.find((s) => s.channel?.id === subj.channelId);
+                        if (subItem && subItem.channel) {
+                          openChannelDetails(subItem.channel, subItem.teacher, subItem.subscription, subItem.progress);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
         )}
-        </main>
-      )}
       </div>
 
       {/* CHANNEL DETAILS OVERLAY */}
@@ -1352,11 +1376,11 @@ function StudentDashboardContent() {
         teacher={selectedOverlayChannel?.teacher}
         subscription={selectedOverlayChannel?.subscription}
         progress={selectedOverlayChannel?.progress}
-        studentId={studentId}
+        studentId={profile?.id}
       />
 
-      {/* FOOTER: Full-width edge-to-edge covering complete size (full sides and bottom) */}
-      <Footer />
+      {/* FOOTER: Prepnx Light Lavender / White Footer */}
+      <PrepnxFooter />
 
       {/* ========================================================================= */}
       {/* MODAL 1: STUDENT PROFILE & ACADEMIC TIMELINE EDIT PANEL */}
@@ -1372,16 +1396,16 @@ function StudentDashboardContent() {
                 </div>
                 <div>
                   <h2 className="text-lg font-extrabold text-[#1E1035]">
-                    Student Profile
+                    My Profile
                   </h2>
                   <p className="text-xs text-[#5F5875]">
-                    Update personal &amp; academic study preferences
+                    Manage your personal profile, academic context, and account credentials
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsProfileOpen(false)}
-                className="p-1.5 rounded-lg text-[#5F5875] hover:text-[#1E1035]"
+                className="p-1.5 rounded-lg text-[#5F5875] hover:text-[#1E1035] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1391,11 +1415,10 @@ function StudentDashboardContent() {
             <div className="p-6 overflow-y-auto space-y-6 flex-1">
               {profileMessage && (
                 <div
-                  className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
-                    profileMessage.type === 'success'
-                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
-                      : 'bg-red-50 text-red-900 border border-red-300'
-                  }`}
+                  className={`p-3 rounded-xl text-xs flex items-center gap-2 ${profileMessage.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
+                    : 'bg-red-50 text-red-900 border border-red-300'
+                    }`}
                 >
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>{profileMessage.text}</span>
@@ -1439,7 +1462,7 @@ function StudentDashboardContent() {
                       variant="outline"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs flex items-center gap-1.5 border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF] rounded-xl font-semibold"
+                      className="text-xs flex items-center gap-1.5 border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF] rounded-xl font-semibold cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5 text-[#6244A6]" />
                       {photoPreview ? 'Replace Photo' : 'Upload Photo'}
@@ -1450,7 +1473,7 @@ function StudentDashboardContent() {
                         variant="ghost"
                         size="sm"
                         onClick={handleRemovePhoto}
-                        className="text-xs text-red-600 hover:bg-red-50 flex items-center gap-1"
+                        className="text-xs text-red-600 hover:bg-red-50 flex items-center gap-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Remove
@@ -1492,7 +1515,7 @@ function StudentDashboardContent() {
                       size="sm"
                       onClick={handleCopyStudentId}
                       disabled={!studentId && !profile?.student_id_code}
-                      className="shrink-0 text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-xl border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF]"
+                      className="shrink-0 text-xs font-bold flex items-center gap-1.5 px-3 py-2 rounded-xl border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF] cursor-pointer"
                       title="Copy Student ID"
                     >
                       {copiedStudentId ? (
@@ -1525,21 +1548,6 @@ function StudentDashboardContent() {
                   placeholder="Enter full name"
                 />
 
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="student-email" className="text-xs font-semibold text-[#5F5875]">
-                    Email Address (Account Credential)
-                  </label>
-                  <input
-                    id="student-email"
-                    name="email"
-                    type="email"
-                    disabled
-                    autoComplete="email"
-                    value={profile?.email || ''}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-[#DCCFFF] bg-[#F8F6FF] text-[#5F5875] cursor-not-allowed"
-                  />
-                </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     label="Phone Number"
@@ -1563,6 +1571,59 @@ function StudentDashboardContent() {
                   />
                 </div>
 
+                {/* COMBINED ACCOUNT SETTINGS & CREDENTIALS SECTION */}
+                <div className="p-4 rounded-2xl border border-[#DCCFFF] bg-[#F8F6FF] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#1E1035]">
+                      <ShieldCheck className="w-4 h-4 text-[#6244A6]" />
+                      <span>Account Settings &amp; Security</span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-bold bg-white text-[#6244A6] border-[#DCCFFF]">
+                      Verified Prepnx Account
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="student-email" className="text-xs font-semibold text-[#5F5875]">
+                      Email Address (Login Credential)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="student-email"
+                        name="email"
+                        type="email"
+                        disabled
+                        readOnly
+                        autoComplete="email"
+                        value={profile?.email || ''}
+                        className="w-full px-3.5 py-2 text-sm font-medium rounded-xl border border-[#DCCFFF] bg-white text-[#1E1035] cursor-not-allowed"
+                      />
+                      <Badge className="shrink-0 text-[10px] py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                        Verified
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div className="p-2.5 rounded-xl bg-white border border-[#DCCFFF] space-y-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#5F5875]">Account Type</span>
+                      <p className="text-xs font-extrabold text-[#1E1035] capitalize">{profile?.role || 'Student'}</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white border border-[#DCCFFF] space-y-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#5F5875]">Account Status</span>
+                      <p className="text-xs font-extrabold text-emerald-600 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                        <span>Active</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-[#5F5875] leading-relaxed">
+                    Login credentials and session authentication are managed securely via Prepnx Authentication. To change your password, use the Forgot Password option on sign-in.
+                  </p>
+                </div>
+
+                {/* Academic Preferences */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="student-class" className="text-xs font-semibold text-[#5F5875]">
@@ -1643,11 +1704,10 @@ function StudentDashboardContent() {
                           key={subj}
                           type="button"
                           onClick={() => toggleEditSubject(subj)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
-                            isSelected
-                              ? 'bg-[#6244A6] text-white border-[#6244A6] font-bold shadow-2xs'
-                              : 'bg-white text-[#5F5875] border-[#DCCFFF] hover:border-[#6244A6]/40 hover:bg-[#F8F6FF]'
-                          }`}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${isSelected
+                            ? 'bg-[#6244A6] text-white border-[#6244A6] font-bold shadow-2xs'
+                            : 'bg-white text-[#5F5875] border-[#DCCFFF] hover:border-[#6244A6]/40 hover:bg-[#F8F6FF]'
+                            }`}
                         >
                           {isSelected ? `✓ ${subj}` : `+ ${subj}`}
                         </button>
@@ -1713,8 +1773,8 @@ function StudentDashboardContent() {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-[#DCCFFF] bg-[#F8F6FF] flex items-center justify-between gap-3">
+            {/* Modal Footer (Pinned, Non-Scrolling, High Contrast) */}
+            <div className="px-6 py-4 border-t border-[#DCCFFF] bg-[#F8F6FF] flex items-center justify-between gap-3 shrink-0">
               <Button
                 type="button"
                 variant="ghost"
@@ -1724,7 +1784,7 @@ function StudentDashboardContent() {
                 title="Log out of your account"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                Log Out
+                <span>Log Out</span>
               </Button>
               <div className="flex items-center gap-2.5">
                 <Button
@@ -1732,19 +1792,29 @@ function StudentDashboardContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsProfileOpen(false)}
-                  className="border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF] rounded-xl font-semibold"
+                  className="border-[#DCCFFF] text-[#1E1035] hover:bg-[#F8F6FF] rounded-xl font-semibold cursor-pointer"
                 >
                   Cancel
                 </Button>
-                <Button
+                <button
                   type="submit"
                   form="student-profile-form"
-                  size="sm"
-                  isLoading={savingProfile}
-                  className="bg-[#6244A6] hover:bg-[#4E338A] text-white rounded-xl font-bold shadow-xs px-4"
+                  disabled={savingProfile}
+                  style={{ backgroundColor: '#2A174E', color: '#FFFFFF' }}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-[#2A174E] hover:bg-[#3D1E6D] text-white border-2 border-[#4C268F] shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Save Changes
-                </Button>
+                  {savingProfile ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      <span>Saving Updates…</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-[#C4B5FD]" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChannelItem, ChannelSubscription, Profile } from '@/types';
+import { LiveCountdownBadge } from '@/components/subscription/live-countdown-badge';
 
 interface ChannelDetailsOverlayProps {
   isOpen: boolean;
@@ -73,14 +74,14 @@ export function ChannelDetailsOverlay({
           .order('created_at', { ascending: true })
           .limit(20);
 
-        // Fetch completed progress if studentId exists
+        // Fetch completed progress strictly for this authenticated student
         let completedIds = new Set<string>();
         if (studentId) {
           const { data: progressData } = await supabase
             .from('student_content_progress')
-            .select('content_id, completed')
+            .select('content_id, status')
             .eq('student_id', studentId)
-            .eq('completed', true);
+            .eq('status', 'completed');
 
           if (progressData) {
             completedIds = new Set(progressData.map((p) => p.content_id));
@@ -174,9 +175,7 @@ export function ChannelDetailsOverlay({
                   Learning Breakdown
                 </span>
                 {subscription ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Active Subscription
-                  </span>
+                  <LiveCountdownBadge expiresAt={subscription.expires_at} variant="pill" />
                 ) : (
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
                     Available Channel
@@ -205,6 +204,20 @@ export function ChannelDetailsOverlay({
         {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Top Performance Stats Grid */}
+          {subscription && (
+            <div className="p-4 rounded-2xl bg-white border border-[#E9DDF8] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#9333EA] block">
+                  28-Day Access Window
+                </span>
+                <span className="text-xs text-[#68647D] block">
+                  Live countdown until renewal:
+                </span>
+              </div>
+              <LiveCountdownBadge expiresAt={subscription.expires_at} variant="digital" />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             <div className="bg-white border border-[#E9DDF8] rounded-2xl p-4 shadow-2xs">
               <span className="text-[11px] font-semibold text-[#68647D] block">Completion</span>

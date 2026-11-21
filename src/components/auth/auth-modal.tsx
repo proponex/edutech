@@ -87,25 +87,30 @@ export function AuthModal() {
         .eq('id', data.user.id)
         .maybeSingle();
 
+      if (!profile || profile.onboarding_completed !== true) {
+        setSuccess('Signed in! Redirecting to complete your profile…');
+        setTimeout(() => {
+          handleClose();
+          window.location.href = '/onboarding';
+        }, 500);
+        return;
+      }
+
+      const role = profile.role || 'student';
       setSuccess('Signed in successfully! Loading portal...');
 
       setTimeout(() => {
         handleClose();
-        if (profile?.onboarding_completed === false) {
-          router.push('/onboarding');
-        } else {
-          const dest =
-            profile?.role === 'admin'
-              ? '/admin'
-              : profile?.role === 'teacher'
-              ? '/teacher'
-              : profile?.role === 'parent'
-              ? '/parent'
-              : '/student';
-          router.push(dest);
-        }
-        router.refresh();
-      }, 700);
+        const dest =
+          role === 'admin'
+            ? '/admin'
+            : role === 'teacher'
+            ? '/teacher'
+            : role === 'parent'
+            ? '/parent'
+            : '/student';
+        window.location.href = dest;
+      }, 500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid email or password.');
     } finally {

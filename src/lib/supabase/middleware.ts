@@ -15,23 +15,17 @@ export async function updateSession(request: NextRequest) {
     supabaseUrl.includes('placeholder') ||
     supabaseUrl.includes('your-project-id')
   ) {
-    // If Supabase credentials are not configured, don't crash middleware
     return supabaseResponse;
   }
 
   const pathname = request.nextUrl.pathname;
-
-  // The standalone /login page is completely removed; redirect directly to landing page ('/')
-  if (pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
 
   const isAdminRoute = pathname.startsWith('/admin') && pathname !== '/admin/login';
   const isStudentRoute = pathname.startsWith('/student');
   const isParentRoute = pathname.startsWith('/parent');
   const isTeacherRoute = pathname.startsWith('/teacher');
   const isOnboardingRoute = pathname === '/onboarding';
-  const isAuthRoute = pathname === '/signup' || pathname === '/admin/login';
+  const isAuthRoute = pathname === '/signup' || pathname === '/admin/login' || pathname === '/login';
   const isProtectedRoute = isAdminRoute || isStudentRoute || isParentRoute || isTeacherRoute;
 
   // Check if any Supabase session cookies exist in the request
@@ -42,19 +36,32 @@ export async function updateSession(request: NextRequest) {
       c.name.includes('supabase-auth-token')
   );
 
-  // Optimization 1: If it's a protected route or onboarding and has no auth cookies at all, redirect immediately (0ms)
+  // Fast redirect 1: Unauthenticated user accessing protected route or onboarding
   if ((isProtectedRoute || isOnboardingRoute) && !hasAuthCookie) {
     const loginUrl = new URL(isAdminRoute ? '/admin/login' : '/', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
+    if (!isAdminRoute) {
+      loginUrl.searchParams.set('auth', 'login');
+      loginUrl.hash = 'hero-login';
+    } else {
+      loginUrl.searchParams.set('redirect', pathname);
+    }
     return NextResponse.redirect(loginUrl);
   }
 
-  // Optimization 2: If it's a public route and has no auth cookies, skip remote network calls completely
-  if (!isProtectedRoute && !isOnboardingRoute && !hasAuthCookie) {
+  // Fast redirect 2: /login route accessed without auth cookies -> redirect to landing login
+  if (pathname === '/login' && !hasAuthCookie) {
+    const landingLogin = new URL('/', request.url);
+    landingLogin.searchParams.set('auth', 'login');
+    landingLogin.hash = 'hero-login';
+    return NextResponse.redirect(landingLogin);
+  }
+
+  // Fast bypass 3: Public route without cookies
+  if (!isProtectedRoute && !isOnboardingRoute && !isAuthRoute && !hasAuthCookie) {
     return supabaseResponse;
   }
 
-  // If auth cookie exists or need to verify session on protected route:
+  // Initialize Supabase server client
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
@@ -75,23 +82,24 @@ export async function updateSession(request: NextRequest) {
   let user = null;
 
   try {
-    // Timeout promise (2.5 seconds max) to prevent middleware from freezing requests if Supabase is paused
     const timeoutPromise = new Promise<{ data: { user: null }; error: Error }>((_, reject) =>
-      setTimeout(() => reject(new Error('Supabase auth timeout')), 2500)
+      setTimeout(() => reject(new Error('Supabase auth timeout')), 3000)
     );
 
     const result = await Promise.race([supabase.auth.getUser(), timeoutPromise]);
     user = result?.data?.user ?? null;
   } catch (err: unknown) {
-    // If Supabase project is paused or offline, log warning and fail gracefully without crashing
     const errorMsg = (err as Error)?.message || 'Auth check failed';
     console.warn(`[Middleware] Supabase auth check unavailable (${errorMsg})`);
   }
 
-  // Onboarding Route Check
-  if (isOnboardingRoute) {
+  // Route /login handler:
+  if (pathname === '/login') {
     if (!user) {
-      return NextResponse.redirect(new URL('/', request.url));
+      const landingLogin = new URL('/', request.url);
+      landingLogin.searchParams.set('auth', 'login');
+      landingLogin.hash = 'hero-login';
+      return NextResponse.redirect(landingLogin);
     }
 
     try {
@@ -101,8 +109,43 @@ export async function updateSession(request: NextRequest) {
         .eq('id', user.id)
         .maybeSingle();
 
-      // If already onboarded, send directly to role dashboard
-      if (profile && profile.onboarding_completed !== false) {
+      if (!profile || profile.onboarding_completed !== true) {
+        return NextResponse.redirect(new URL('/onboarding', request.url));
+      }
+
+      const role = profile.role || 'student';
+      const target =
+        role === 'admin'
+          ? '/admin'
+          : role === 'teacher'
+          ? '/teacher'
+          : role === 'parent'
+          ? '/parent'
+          : '/student';
+      return NextResponse.redirect(new URL(target, request.url));
+    } catch {
+      return NextResponse.redirect(new URL('/student', request.url));
+    }
+  }
+
+  // Onboarding Route Check
+  if (isOnboardingRoute) {
+    if (!user) {
+      const landingLogin = new URL('/', request.url);
+      landingLogin.searchParams.set('auth', 'login');
+      landingLogin.hash = 'hero-login';
+      return NextResponse.redirect(landingLogin);
+    }
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // If user has already completed onboarding, redirect directly to their dashboard
+      if (profile && profile.onboarding_completed === true && profile.role) {
         const target =
           profile.role === 'admin'
             ? '/admin'
@@ -114,34 +157,40 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(new URL(target, request.url));
       }
     } catch {
-      // Allow proceeding to onboarding
+      // Allow proceeding to onboarding on error
     }
+    return supabaseResponse;
   }
 
-  // Protected Routes Check
+  // Protected Routes Check (/student, /teacher, /parent, /admin)
   if (isProtectedRoute) {
     if (!user) {
       const loginUrl = new URL(isAdminRoute ? '/admin/login' : '/', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
+      if (!isAdminRoute) {
+        loginUrl.searchParams.set('auth', 'login');
+        loginUrl.hash = 'hero-login';
+      } else {
+        loginUrl.searchParams.set('redirect', pathname);
+      }
       return NextResponse.redirect(loginUrl);
     }
 
-    // Role-based protection & Onboarding enforcement
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, onboarding_completed')
+        .select('role, status, onboarding_completed')
         .eq('id', user.id)
         .maybeSingle();
 
-      // If user has not completed onboarding, force redirection to onboarding
-      if (profile && profile.onboarding_completed === false) {
+      // Incomplete onboarding enforcement: must complete onboarding first
+      if (!profile || profile.onboarding_completed !== true) {
         return NextResponse.redirect(new URL('/onboarding', request.url));
       }
 
-      const role = profile?.role;
+      const role = profile.role;
 
-      if (isAdminRoute && role !== 'admin') {
+      // Role mismatch redirection
+      if (isAdminRoute && role && role !== 'admin') {
         const target =
           role === 'student'
             ? '/student'
@@ -153,7 +202,7 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(new URL(target, request.url));
       }
 
-      if (isStudentRoute && role !== 'student' && role !== 'admin') {
+      if (isStudentRoute && role && role !== 'student' && role !== 'admin') {
         const target =
           role === 'parent'
             ? '/parent'
@@ -163,7 +212,7 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(new URL(target, request.url));
       }
 
-      if (isParentRoute && role !== 'parent' && role !== 'admin') {
+      if (isParentRoute && role && role !== 'parent' && role !== 'admin') {
         const target =
           role === 'student'
             ? '/student'
@@ -173,7 +222,7 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(new URL(target, request.url));
       }
 
-      if (isTeacherRoute && role !== 'teacher' && role !== 'admin') {
+      if (isTeacherRoute && role && role !== 'teacher' && role !== 'admin') {
         const target =
           role === 'student'
             ? '/student'
@@ -182,21 +231,25 @@ export async function updateSession(request: NextRequest) {
             : '/';
         return NextResponse.redirect(new URL(target, request.url));
       }
-    } catch {
-      // Role fetch failed
+    } catch (roleErr) {
+      console.warn('[Middleware] Profile role check error:', roleErr);
     }
   }
 
-  // If already logged in and visiting login/signup, redirect to dashboard
+  // If already logged in and visiting login/signup pages, redirect to appropriate destination
   if (isAuthRoute && user) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, onboarding_completed')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      const role = profile?.role;
+      if (!profile || profile.onboarding_completed !== true) {
+        return NextResponse.redirect(new URL('/onboarding', request.url));
+      }
+
+      const role = profile.role;
       if (role === 'admin') {
         return NextResponse.redirect(new URL('/admin', request.url));
       } else if (role === 'student') {

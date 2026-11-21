@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ChannelItem, Profile } from '@/types';
 import { createClient } from '@/lib/supabase/client';
+import { LiveCountdownBadge } from '@/components/subscription/live-countdown-badge';
 
 interface DetailedStudentProfile {
   studentId: string;
@@ -208,9 +209,11 @@ export function TeacherStudentsView({ teacherId }: { teacherId: string }) {
           // Subscription info
           const linkedTx = (payments || []).find((p) => p.student_id === sid);
           const linkedEarn = (earnings || []).find((e) => e.transaction_id === linkedTx?.id || e.order_id === sub.order_id);
-          const daysRem = sub.expires_at
-            ? Math.max(0, Math.ceil((new Date(sub.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-            : 28;
+          const subExpiryMs = sub.expires_at
+            ? new Date(sub.expires_at).getTime()
+            : new Date(sub.starts_at || sub.created_at || now.toISOString()).getTime() + 28 * 24 * 60 * 60 * 1000;
+          const exactSecondsRem = Math.max(0, Math.floor((subExpiryMs - now.getTime()) / 1000));
+          const daysRem = Math.floor(exactSecondsRem / 86400);
 
           const subDetail = {
             id: sub.id,
@@ -694,10 +697,7 @@ export function TeacherStudentsView({ teacherId }: { teacherId: string }) {
                       <span className="font-extrabold text-sm text-neutral-900 dark:text-white">
                         {sub.subjectName || 'Entire Channel'}
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Active &bull; {sub.daysRemaining} days left
-                      </span>
+                      <LiveCountdownBadge expiresAt={sub.expiresAt} variant="full" />
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-neutral-200/60 dark:border-neutral-700/60">

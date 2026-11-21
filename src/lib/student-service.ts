@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/client';
 import { TeacherService } from '@/lib/teacher-service';
 import {
+  DURATION_28_DAYS_MS,
+  calculateSubscriptionCountdown,
+  type SubscriptionCountdown,
+} from '@/lib/subscription-utils';
+import {
   Profile,
   StudentAcademicProfile,
   ChannelItem,
@@ -526,6 +531,8 @@ export const StudentService = {
     expiresAt?: string;
     startsAt?: string;
     daysRemaining?: number;
+    secondsRemaining?: number;
+    countdown?: SubscriptionCountdown;
   }> {
     const { data, error } = await supabase
       .from('channel_subscriptions')
@@ -552,6 +559,25 @@ export const StudentService = {
     let isAnyExpired = false;
 
     for (const sub of data) {
+      // Auto-heal missing expires_at or starts_at to enforce exact 28 days
+      if (!sub.expires_at) {
+        const startMs = new Date(sub.starts_at || sub.created_at || now.toISOString()).getTime();
+        sub.starts_at = sub.starts_at || new Date(startMs).toISOString();
+        sub.expires_at = new Date(startMs + DURATION_28_DAYS_MS).toISOString();
+        sub.duration = '28_days';
+        try {
+          await supabase
+            .from('channel_subscriptions')
+            .update({
+              starts_at: sub.starts_at,
+              expires_at: sub.expires_at,
+              duration: '28_days',
+              updated_at: now.toISOString(),
+            })
+            .eq('id', sub.id);
+        } catch {}
+      }
+
       const isPastExpiry = Boolean(sub.expires_at && new Date(sub.expires_at) <= now);
       if (isPastExpiry && sub.status === 'active') {
         try {
@@ -580,13 +606,9 @@ export const StudentService = {
     const isExpired = !mostRecentActiveSub && isAnyExpired;
     const hasActiveSubscription = hasChannelWideSubscription || activeSubjectNames.length > 0;
 
-    let daysRemaining = 0;
-    if (primarySub?.expires_at && hasActiveSubscription) {
-      daysRemaining = Math.max(
-        0,
-        Math.ceil((new Date(primarySub.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      );
-    }
+    const countdown = primarySub?.expires_at
+      ? calculateSubscriptionCountdown(primarySub.expires_at, now.getTime())
+      : undefined;
 
     return {
       hasActiveSubscription,
@@ -597,7 +619,9 @@ export const StudentService = {
       hasChannelWideSubscription,
       expiresAt: primarySub?.expires_at,
       startsAt: primarySub?.starts_at || primarySub?.created_at,
-      daysRemaining,
+      daysRemaining: countdown ? countdown.days : 0,
+      secondsRemaining: countdown ? countdown.totalSeconds : 0,
+      countdown,
     };
   },
 
@@ -774,8 +798,49 @@ export const StudentService = {
         return [];
       }
 
+      const now = new Date();
+      const validActiveSubs: any[] = [];
+
+      for (const sub of data) {
+        // Auto-heal missing expires_at or starts_at to enforce exact 28 days
+        if (!sub.expires_at) {
+          const startMs = new Date(sub.starts_at || sub.created_at || now.toISOString()).getTime();
+          sub.starts_at = sub.starts_at || new Date(startMs).toISOString();
+          sub.expires_at = new Date(startMs + DURATION_28_DAYS_MS).toISOString();
+          sub.duration = '28_days';
+          try {
+            await supabase
+              .from('channel_subscriptions')
+              .update({
+                starts_at: sub.starts_at,
+                expires_at: sub.expires_at,
+                duration: '28_days',
+                updated_at: now.toISOString(),
+              })
+              .eq('id', sub.id);
+          } catch {}
+        }
+
+        // Expire if past expiry
+        if (new Date(sub.expires_at) <= now) {
+          try {
+            await supabase
+              .from('channel_subscriptions')
+              .update({ status: 'expired', updated_at: now.toISOString() })
+              .eq('id', sub.id);
+          } catch {}
+          continue;
+        }
+
+        validActiveSubs.push(sub);
+      }
+
+      if (validActiveSubs.length === 0) {
+        return [];
+      }
+
       const results = await Promise.all(
-        data.map(async (sub) => {
+        validActiveSubs.map(async (sub) => {
           const ch = await TeacherService.getChannelById(sub.channel_id);
           let teacher: Profile | null = null;
           if (ch?.teacher_id) {
