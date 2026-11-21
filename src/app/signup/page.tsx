@@ -4,16 +4,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { GraduationCap, AlertCircle, UserPlus, CheckCircle2, BookOpen, Camera, Trash2, X, User } from 'lucide-react';
-import { UserRole, ClassItem, BoardItem } from '@/types';
+import { GraduationCap, AlertCircle, UserPlus, CheckCircle2, BookOpen, Camera, Trash2, X, User, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ClassItem, BoardItem } from '@/types';
 import { Footer } from '@/components/layout/footer';
 import { TeacherService, DEFAULT_LANGUAGES } from '@/lib/teacher-service';
 import { StudentService } from '@/lib/student-service';
+import { GoogleButton } from '@/components/auth/google-button';
+import { OtpInput } from '@/components/auth/otp-input';
 
 export const ALL_RELEVANT_SUBJECTS = [
   'Tamil',
@@ -35,7 +36,6 @@ export const ALL_RELEVANT_SUBJECTS = [
 
 export default function SignUpPage() {
   const router = useRouter();
-  const supabase = createClient();
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
@@ -46,6 +46,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [step, setStep] = useState<'form' | 'otp'>('form');
 
   // Student specific details (Photo, Phone, Parent Phone)
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -108,19 +109,12 @@ export default function SignUpPage() {
     );
   };
 
-  const isConfigured = isSupabaseConfigured();
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    if (!isConfigured) {
-      setError('Supabase credentials pending. Please set them in .env.local.');
-      return;
-    }
-
-    if (!name || !email || !password) {
+    if (!name.trim() || !email.trim() || !password) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -147,173 +141,106 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      // Sign up with Supabase Auth including raw_user_meta_data for the trigger
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            role,
-          },
-        },
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          type: 'signup',
+        }),
       });
 
-      if (signUpError) {
-        throw new Error(signUpError.message);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to dispatch verification code.');
       }
 
-      if (!data.user) {
-        throw new Error('Registration failed: No user returned.');
-      }
-
-      // Handle photo upload if student selected an image file
-      let photoUrl: string | null = null;
-      if (role === 'student' && photoFile) {
-        try {
-          photoUrl = await StudentService.uploadAvatar(data.user.id, photoFile);
-        } catch {
-          photoUrl = photoPreview;
-        }
-      }
-
-      // Check if profile was created by trigger; if trigger is not installed yet, insert as backup
-      try {
-        await supabase.from('profiles').upsert(
-          {
-            id: data.user.id,
-            name,
-            email,
-            role: role as UserRole,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        );
-
-        if (role === 'student') {
-          await supabase.from('students').upsert(
-            {
-              id: data.user.id,
-              name,
-              email,
-              photo_url: photoUrl || null,
-              phone: phone || null,
-              parent_phone: parentPhone || null,
-              class_id: selectedClassId || null,
-              board_id: selectedBoardId || null,
-              preferred_language: selectedLanguage || null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'id' }
-          );
-        } else if (role === 'teacher') {
-          await supabase.from('teachers').upsert(
-            {
-              id: data.user.id,
-              name,
-              email,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'id' }
-          );
-        } else if (role === 'parent') {
-          await supabase.from('parents').upsert(
-            {
-              id: data.user.id,
-              name,
-              email,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'id' }
-          );
-        }
-      } catch {
-        // Trigger might have already handled it or RLS prevented insert
-      }
-
-      // Save Student Academic Profile & Timeline record with multi-subjects
-      if (role === 'student') {
-        try {
-          await StudentService.saveStudentAcademicProfile({
-            studentId: data.user.id,
-            academicYear: '2026–27',
-            classId: selectedClassId,
-            boardId: selectedBoardId,
-            subjects: selectedSubjects,
-            preferredLanguage: selectedLanguage,
-          });
-
-          // Sync local profile cache
-          await StudentService.updateStudentProfile(data.user.id, {
-            photo_url: photoUrl || null,
-            phone: phone || null,
-            parent_phone: parentPhone || null,
-            class_id: selectedClassId || null,
-            board_id: selectedBoardId || null,
-            preferred_language: selectedLanguage || null,
-            subjects: selectedSubjects,
-          });
-
-          // Generate and persist permanent Student ID (ED-YYYY-NNNNNN)
-          await fetch('/api/student/register-id', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: data.user.id }),
-          }).catch((err) => console.warn('Student ID pre-generation deferred:', err));
-        } catch (e) {
-          console.error('Error saving academic profile', e);
-        }
-      }
-
-      const targetRoute = role === 'student' ? '/student' : `/${role}`;
-
-      // If session is present directly from signup
-      if (data.session) {
-        setSuccess('Registration successful! Redirecting to your dashboard...');
-        router.push(targetRoute);
-        router.refresh();
-        return;
-      }
-
-      // If email confirmation was required by project settings, immediately sign in with password
-      // (as development email confirmation is bypassed)
-      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (!signInErr && signInData?.session) {
-        setSuccess('Account created successfully! Entering dashboard...');
-        router.push(targetRoute);
-        router.refresh();
-        return;
-      }
-
-      // If sign in succeeded
-      setSuccess('Account registered! Redirecting to dashboard...');
-      router.push(targetRoute);
-      router.refresh();
+      setStep('otp');
+      setSuccess(`A 6-digit verification code was sent to ${email.trim()}. Please enter it below.`);
     } catch (err: unknown) {
-      // If error indicates email rate limit exceeded, attempt direct sign in
-      if (err instanceof Error && err.message.toLowerCase().includes('rate limit')) {
-        try {
-          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (!signInErr && signInData?.session) {
-            const targetRoute = role === 'student' ? '/student' : `/${role}`;
-            router.push(targetRoute);
-            router.refresh();
-            return;
-          }
-        } catch {
-          // Fall through to display original error
-        }
-      }
       setError(err instanceof Error ? err.message : 'Registration error.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (code: string) => {
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: code,
+          name: name.trim(),
+          role,
+          password,
+          phone,
+          parent_phone: parentPhone,
+          class_id: selectedClassId,
+          board_id: selectedBoardId,
+          preferred_language: selectedLanguage,
+          subjects: selectedSubjects,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data.error || 'Invalid or expired OTP code.',
+          remainingAttempts: data.remainingAttempts,
+        };
+      }
+
+      // If photo upload was selected for student
+      if (role === 'student' && photoFile && data.user?.id) {
+        try {
+          await StudentService.uploadAvatar(data.user.id, photoFile);
+        } catch {
+          // non-critical avatar fallback
+        }
+      }
+
+      setSuccess('Email verified! Account created successfully. Entering dashboard...');
+      const targetRoute = role === 'student' ? '/student' : `/${role}`;
+      setTimeout(() => {
+        router.push(targetRoute);
+        router.refresh();
+      }, 800);
+
+      return { success: true };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'OTP verification failed.',
+      };
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          type: 'signup',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, resendAvailableIn: data.retryAfter, error: data.error };
+      }
+      setSuccess(`A new code was dispatched to ${email.trim()}.`);
+      return { success: true };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Could not resend OTP.',
+      };
     }
   };
 
@@ -337,26 +264,23 @@ export default function SignUpPage() {
         <Card className="w-full max-w-md shadow-xl border-neutral-200/80 dark:border-neutral-800 my-6">
           <CardHeader className="text-center pb-2">
             <div className="mx-auto w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-950/60 border border-primary-300 dark:border-primary-800 flex items-center justify-center mb-2">
-              <UserPlus className="w-6 h-6 text-primary-700 dark:text-primary-400" />
+              {step === 'otp' ? (
+                <ShieldCheck className="w-6 h-6 text-primary-700 dark:text-primary-400" />
+              ) : (
+                <UserPlus className="w-6 h-6 text-primary-700 dark:text-primary-400" />
+              )}
             </div>
             <CardTitle className="text-2xl font-extrabold tracking-tight">
-              Create Your Account
+              {step === 'otp' ? 'Verify Your Email' : 'Create Your Account'}
             </CardTitle>
             <CardDescription>
-              Join the Edutech learning community today.
+              {step === 'otp'
+                ? `Enter the 6-digit code sent to ${email}`
+                : 'Join the Edutech learning community today.'}
             </CardDescription>
           </CardHeader>
 
           <CardContent>
-            {!isConfigured && (
-              <div className="mb-5 p-3 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  Please set your Supabase credentials in <code className="font-mono font-semibold">.env.local</code> to activate registration.
-                </div>
-              </div>
-            )}
-
             {error && (
               <div className="mb-5 p-3.5 rounded-xl border border-red-200 dark:border-red-800/60 bg-red-50 dark:bg-red-950/30 text-red-900 dark:text-red-200 text-xs flex gap-2.5">
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -371,7 +295,46 @@ export default function SignUpPage() {
               </div>
             )}
 
-            <form onSubmit={handleSignUp} className="space-y-4">
+            {step === 'otp' ? (
+              <div className="space-y-4 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('form');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Edit registration details
+                </button>
+
+                <OtpInput
+                  email={email}
+                  onVerify={handleVerifyOtp}
+                  onResend={handleResendOtp}
+                  onCancel={() => {
+                    setStep('form');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Option A: Continue with Google */}
+                <GoogleButton text="Continue with Google" className="mb-4" />
+
+                <div className="relative flex py-2 items-center mb-4">
+                  <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800" />
+                  <span className="flex-shrink mx-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                    or register with email
+                  </span>
+                  <div className="flex-grow border-t border-neutral-200 dark:border-neutral-800" />
+                </div>
+
+                <form onSubmit={handleSignUp} className="space-y-4">
               <Input
                 label="Full Name"
                 type="text"
@@ -641,7 +604,9 @@ export default function SignUpPage() {
                 Create Account
               </Button>
             </form>
-          </CardContent>
+          </>
+        )}
+      </CardContent>
 
           <CardFooter className="justify-center text-xs text-neutral-500 dark:text-neutral-400">
             <span>Already have an account? </span>

@@ -13,8 +13,14 @@ import {
   AlertCircle,
   Mail,
   UserCheck,
+  User,
+  ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react';
 import { BannerItem, Profile } from '@/types';
+import { GoogleButton } from '@/components/auth/google-button';
+import { OtpInput } from '@/components/auth/otp-input';
+import { ForgotPasswordModal } from '@/components/auth/forgot-password-modal';
 
 // Exact 3D High-Res Assets with Verified 100% Transparent Backgrounds
 const ASSETS = {
@@ -35,6 +41,13 @@ export function HeroSplitSection() {
   const [bannerLoading, setBannerLoading] = useState(true);
 
   // Auth states
+  const [authTab, setAuthTab] = useState<'login' | 'signup'>('login');
+  const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
+  const [signupName, setSignupName] = useState('');
+  const [signupRole, setSignupRole] = useState<'student' | 'parent' | 'teacher'>('student');
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [otpResendCooldown, setOtpResendCooldown] = useState(60);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -136,6 +149,105 @@ export function HeroSplitSection() {
       setAuthError(err instanceof Error ? err.message : 'Invalid email or password.');
     } finally {
       setAuthLoading(false);
+    }
+  };
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+
+    if (!signupName.trim()) {
+      setAuthError('Please enter your full name.');
+      return;
+    }
+
+    if (!email || !password) {
+      setAuthError('Please provide both your email address and password.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setAuthError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setAuthLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          purpose: 'signup',
+          name: signupName.trim(),
+          role: signupRole,
+          password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send verification code.');
+      }
+
+      setOtpResendCooldown(data.resendAvailableIn || 60);
+      setSignupStep('otp');
+    } catch (err: unknown) {
+      setAuthError(err instanceof Error ? err.message : 'Registration request failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleOtpVerify = async (otpCode: string) => {
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: otpCode,
+          purpose: 'signup',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error, remainingAttempts: data.remainingAttempts };
+      }
+
+      if (data.redirectUrl) {
+        router.push(data.redirectUrl);
+        router.refresh();
+      }
+      return { success: true };
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : 'Verification failed.' };
+    }
+  };
+
+  const handleOtpResend = async () => {
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          purpose: 'signup',
+          name: signupName.trim(),
+          role: signupRole,
+          password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error };
+      }
+      return { success: true, resendAvailableIn: data.resendAvailableIn || 60 };
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to resend code.' };
     }
   };
 
@@ -361,19 +473,14 @@ export function HeroSplitSection() {
                 {/* Top Accent Stripe in Rich Violet Gradient */}
                 <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#2A174E] via-[#4C268F] to-[#8060CE]" />
 
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-5">
                   <div className="w-12 h-12 rounded-2xl bg-[#EEE8FF] border border-[#DCCFFF] text-[#3D1E6D] flex items-center justify-center shadow-xs">
                     <GraduationCap className="w-6 h-6 text-[#3D1E6D]" />
                   </div>
-                </div>
-
-                <div className="space-y-1.5 mb-6">
-                  <h2 className="font-display text-2xl sm:text-3xl font-black text-[#1E1035] tracking-tight">
-                    Welcome Back
-                  </h2>
-                  <p className="text-sm text-[#5F5875] leading-relaxed">
-                    Sign in to your Student, Parent, or Teacher account.
-                  </p>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF8FF] border border-[#DCCFFF] text-[11px] font-bold text-[#6244A6]">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#6244A6]" />
+                    <span>Verified Portal</span>
+                  </div>
                 </div>
 
                 {/* If session exists, show active user panel */}
@@ -414,123 +521,326 @@ export function HeroSplitSection() {
                       </button>
                     </div>
                   </div>
+                ) : signupStep === 'otp' ? (
+                  /* OTP VERIFICATION VIEW */
+                  <div className="py-2 animate-in fade-in zoom-in-95 duration-200">
+                    <OtpInput
+                      email={email}
+                      title="Verify Your Registration"
+                      subtitle="We sent a 6-digit verification code to your email. Enter it below to activate your account."
+                      initialCooldown={otpResendCooldown}
+                      onVerify={handleOtpVerify}
+                      onResend={handleOtpResend}
+                      onCancel={() => setSignupStep('form')}
+                    />
+                  </div>
                 ) : (
                   <>
-                    {!isConfigured && (
-                      <div className="mb-5 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-xs flex gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <div>Please configure Supabase credentials in .env.local to activate authentication.</div>
+                    <div className="space-y-1 mb-5">
+                      <h2 className="font-display text-2xl sm:text-3xl font-black text-[#1E1035] tracking-tight">
+                        {authTab === 'login' ? 'Welcome Back' : 'Create Prepnx Account'}
+                      </h2>
+                      <p className="text-xs sm:text-sm text-[#5F5875] leading-relaxed">
+                        {authTab === 'login'
+                          ? 'Sign in to access your digital classroom & lessons.'
+                          : 'Join students, teachers, and parents today.'}
+                      </p>
+                    </div>
+
+                    {/* Google OAuth Button */}
+                    <div className="mb-4">
+                      <GoogleButton
+                        text={authTab === 'login' ? 'Continue with Google' : 'Sign up with Google'}
+                        onError={(err) => setAuthError(err)}
+                      />
+                    </div>
+
+                    {/* Divider */}
+                    <div className="relative my-4 text-center">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-[#DCCFFF]" />
                       </div>
-                    )}
+                      <span className="relative bg-white px-3 text-[11px] font-bold uppercase tracking-wider text-[#5F5875]/80">
+                        or continue with email
+                      </span>
+                    </div>
+
+                    {/* Tab Switcher: Sign In vs Create Account */}
+                    <div className="grid grid-cols-2 p-1 rounded-2xl bg-[#F8F6FF] border border-[#DCCFFF] mb-5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthTab('login');
+                          setAuthError(null);
+                        }}
+                        className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          authTab === 'login'
+                            ? 'bg-white text-[#1E1035] shadow-sm border border-[#DCCFFF]/60'
+                            : 'text-[#5F5875] hover:text-[#1E1035]'
+                        }`}
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthTab('signup');
+                          setAuthError(null);
+                        }}
+                        className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          authTab === 'signup'
+                            ? 'bg-white text-[#1E1035] shadow-sm border border-[#DCCFFF]/60'
+                            : 'text-[#5F5875] hover:text-[#1E1035]'
+                        }`}
+                      >
+                        Create Account
+                      </button>
+                    </div>
 
                     {authError && (
-                      <div className="mb-5 p-3.5 rounded-xl border border-red-200 bg-red-50 text-red-900 text-xs flex gap-2.5 animate-in fade-in duration-200">
+                      <div className="mb-4 p-3.5 rounded-xl border border-red-200 bg-red-50 text-red-900 text-xs flex gap-2.5 animate-in fade-in duration-200">
                         <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                         <div className="flex-1 font-medium">{authError}</div>
                       </div>
                     )}
 
-                    <form onSubmit={handleLogin} className="space-y-4">
-                      {/* Email */}
-                      <div className="space-y-1.5">
-                        <label
-                          htmlFor="hero-email"
-                          className="block text-xs font-bold uppercase tracking-wider text-[#1E1035]"
-                        >
-                          Email Address
-                        </label>
-                        <div className="relative">
-                          <input
-                            id="hero-email"
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="name@example.com"
-                            autoComplete="email"
-                            className="w-full px-4 py-3.5 rounded-xl text-sm border border-[#DCCFFF] bg-[#F8F6FF]/70 text-[#1E1035] placeholder:text-[#5F5875]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6244A6]/50 focus:border-[#4C268F] transition-all"
-                          />
-                          <Mail className="absolute right-4 top-4 w-4 h-4 text-[#5F5875]/60 pointer-events-none" />
-                        </div>
-                      </div>
-
-                      {/* Password */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
+                    {/* TAB: SIGN IN FORM */}
+                    {authTab === 'login' ? (
+                      <form onSubmit={handleLogin} className="space-y-4">
+                        {/* Email */}
+                        <div className="space-y-1.5">
                           <label
-                            htmlFor="hero-password"
+                            htmlFor="hero-email"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#1E1035]"
+                          >
+                            Email Address
+                          </label>
+                          <div className="relative">
+                            <input
+                              id="hero-email"
+                              type="email"
+                              required
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              placeholder="name@example.com"
+                              autoComplete="email"
+                              className="w-full px-4 py-3 rounded-xl text-sm border border-[#DCCFFF] bg-[#F8F6FF]/70 text-[#1E1035] placeholder:text-[#5F5875]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6244A6]/50 focus:border-[#4C268F] transition-all"
+                            />
+                            <Mail className="absolute right-4 top-3.5 w-4 h-4 text-[#5F5875]/60 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* Password */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label
+                              htmlFor="hero-password"
+                              className="block text-xs font-bold uppercase tracking-wider text-[#1E1035]"
+                            >
+                              Password
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setIsForgotModalOpen(true)}
+                              className="text-xs font-bold text-[#4C268F] hover:text-[#3D1E6D] hover:underline cursor-pointer"
+                            >
+                              Forgot password?
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <input
+                              id="hero-password"
+                              type={showPassword ? 'text' : 'password'}
+                              required
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              placeholder="••••••••"
+                              autoComplete="current-password"
+                              className="w-full px-4 py-3 rounded-xl text-sm border border-[#DCCFFF] bg-[#F8F6FF]/70 text-[#1E1035] placeholder:text-[#5F5875]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6244A6]/50 focus:border-[#4C268F] transition-all pr-11"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3.5 top-3 p-1 text-[#5F5875] hover:text-[#1E1035] focus:outline-none transition-colors"
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="pt-2">
+                          <button
+                            type="submit"
+                            disabled={authLoading}
+                            className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-[#2A174E] via-[#3D1E6D] to-[#6244A6] hover:from-[#3D1E6D] hover:to-[#7A54CF] text-white font-extrabold text-sm shadow-xl shadow-violet-950/25 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                          >
+                            {authLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span>Signing In…</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Sign In</span>
+                                <ArrowRight className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      /* TAB: CREATE ACCOUNT FORM */
+                      <form onSubmit={handleSignupSubmit} className="space-y-3.5">
+                        {/* Name */}
+                        <div className="space-y-1">
+                          <label
+                            htmlFor="hero-signup-name"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#1E1035]"
+                          >
+                            Full Name
+                          </label>
+                          <div className="relative">
+                            <input
+                              id="hero-signup-name"
+                              type="text"
+                              required
+                              value={signupName}
+                              onChange={(e) => setSignupName(e.target.value)}
+                              placeholder="e.g. Arun Kumar"
+                              className="w-full px-4 py-2.5 rounded-xl text-sm border border-[#DCCFFF] bg-[#F8F6FF]/70 text-[#1E1035] placeholder:text-[#5F5875]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6244A6]/50 focus:border-[#4C268F] transition-all"
+                            />
+                            <User className="absolute right-4 top-3 w-4 h-4 text-[#5F5875]/60 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* Role Selector */}
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#1E1035]">
+                            I am registering as:
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'student', label: 'Student' },
+                              { id: 'parent', label: 'Parent' },
+                              { id: 'teacher', label: 'Teacher' },
+                            ].map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setSignupRole(item.id as 'student' | 'parent' | 'teacher')}
+                                className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
+                                  signupRole === item.id
+                                    ? 'bg-[#6244A6] text-white border-[#6244A6] shadow-xs'
+                                    : 'bg-[#F8F6FF] text-[#5F5875] border-[#DCCFFF] hover:border-[#6244A6]/40'
+                                }`}
+                              >
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-1">
+                          <label
+                            htmlFor="hero-signup-email"
+                            className="block text-xs font-bold uppercase tracking-wider text-[#1E1035]"
+                          >
+                            Email Address
+                          </label>
+                          <div className="relative">
+                            <input
+                              id="hero-signup-email"
+                              type="email"
+                              required
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              placeholder="name@example.com"
+                              autoComplete="email"
+                              className="w-full px-4 py-2.5 rounded-xl text-sm border border-[#DCCFFF] bg-[#F8F6FF]/70 text-[#1E1035] placeholder:text-[#5F5875]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6244A6]/50 focus:border-[#4C268F] transition-all"
+                            />
+                            <Mail className="absolute right-4 top-3 w-4 h-4 text-[#5F5875]/60 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* Password */}
+                        <div className="space-y-1">
+                          <label
+                            htmlFor="hero-signup-password"
                             className="block text-xs font-bold uppercase tracking-wider text-[#1E1035]"
                           >
                             Password
                           </label>
-                          <a
-                            href="mailto:support@edutech.internal?subject=Password%20Reset%20Request"
-                            className="text-xs font-bold text-[#4C268F] hover:text-[#3D1E6D] hover:underline"
-                          >
-                            Forgot password?
-                          </a>
+                          <div className="relative">
+                            <input
+                              id="hero-signup-password"
+                              type={showPassword ? 'text' : 'password'}
+                              required
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              placeholder="Minimum 6 characters"
+                              autoComplete="new-password"
+                              className="w-full px-4 py-2.5 rounded-xl text-sm border border-[#DCCFFF] bg-[#F8F6FF]/70 text-[#1E1035] placeholder:text-[#5F5875]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6244A6]/50 focus:border-[#4C268F] transition-all pr-11"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3.5 top-2.5 p-1 text-[#5F5875] hover:text-[#1E1035] focus:outline-none transition-colors"
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                         </div>
-                        <div className="relative">
-                          <input
-                            id="hero-password"
-                            type={showPassword ? 'text' : 'password'}
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            autoComplete="current-password"
-                            className="w-full px-4 py-3.5 rounded-xl text-sm border border-[#DCCFFF] bg-[#F8F6FF]/70 text-[#1E1035] placeholder:text-[#5F5875]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#6244A6]/50 focus:border-[#4C268F] transition-all pr-11"
-                          />
+
+                        {/* Submit Button */}
+                        <div className="pt-2">
                           <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3.5 top-3.5 p-1 text-[#5F5875] hover:text-[#1E1035] focus:outline-none transition-colors"
-                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            type="submit"
+                            disabled={authLoading}
+                            className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-[#2A174E] via-[#3D1E6D] to-[#6244A6] hover:from-[#3D1E6D] hover:to-[#7A54CF] text-white font-extrabold text-sm shadow-xl shadow-violet-950/25 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                           >
-                            {showPassword ? (
-                              <EyeOff className="w-4 h-4" />
+                            {authLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span>Sending Code…</span>
+                              </>
                             ) : (
-                              <Eye className="w-4 h-4" />
+                              <>
+                                <span>Verify via Email OTP</span>
+                                <ArrowRight className="w-4 h-4" />
+                              </>
                             )}
                           </button>
                         </div>
-                      </div>
+                      </form>
+                    )}
 
-                      {/* Submit Button */}
-                      <div className="pt-2">
-                        <button
-                          type="submit"
-                          disabled={authLoading}
-                          className="w-full py-4 px-5 rounded-xl bg-gradient-to-r from-[#2A174E] via-[#3D1E6D] to-[#6244A6] hover:from-[#3D1E6D] hover:to-[#7A54CF] text-white font-extrabold text-sm shadow-xl shadow-violet-950/25 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                          {authLoading ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>Signing In…</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Sign In</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </form>
-
-                    <div className="pt-6 border-t border-[#DCCFFF]/60 text-center text-xs text-[#5F5875] mt-6">
-                      Don&apos;t have an account yet?{' '}
+                    <div className="pt-4 border-t border-[#DCCFFF]/60 text-center text-xs text-[#5F5875] mt-4">
+                      Need custom curriculum setup?{' '}
                       <Link
                         href="/signup"
                         className="text-[#3D1E6D] hover:text-[#4C268F] font-black hover:underline ml-1"
                       >
-                        Create Account
+                        Full Registration Page &rarr;
                       </Link>
                     </div>
                   </>
                 )}
               </div>
             </div>
+
+            {/* Forgot Password Modal */}
+            <ForgotPasswordModal
+              isOpen={isForgotModalOpen}
+              onClose={() => setIsForgotModalOpen(false)}
+              onSuccessLogin={() => {
+                setIsForgotModalOpen(false);
+                setAuthTab('login');
+              }}
+            />
 
           </div>
         </div>

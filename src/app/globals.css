@@ -434,6 +434,37 @@ h1, h2, h3, h4, h5, h6 {
 .animate-paint-drip          { animation: paintDripGently 4s ease-in-out infinite; }
 .animate-paint-drop          { animation: paintDropGlow 3s ease-in-out infinite; }
 
+@keyframes brandShimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.animate-brand-shimmer {
+  background: linear-gradient(
+    90deg,
+    #EEE8FF 0%,
+    #DCCFFF 20%,
+    #C7B5F5 40%,
+    #DCCFFF 60%,
+    #EEE8FF 80%,
+    #EEE8FF 100%
+  );
+  background-size: 800px 100%;
+  animation: brandShimmer 1.6s linear infinite;
+}
+.dark .animate-brand-shimmer {
+  background: linear-gradient(
+    90deg,
+    #282238 0%,
+    #3D286C 20%,
+    #4F3589 40%,
+    #3D286C 60%,
+    #282238 80%,
+    #282238 100%
+  );
+  background-size: 800px 100%;
+  animation: brandShimmer 1.6s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
   .animate-float-medium,

@@ -14,6 +14,10 @@ export interface Profile {
   subjects?: string[] | null;
   student_id_code?: string | null;
   status?: 'active' | 'suspended' | null;
+  onboarding_completed?: boolean | null;
+  auth_provider?: string | null;
+  full_name?: string | null;
+  username?: string | null;
   created_at: string;
   updated_at: string;
 }

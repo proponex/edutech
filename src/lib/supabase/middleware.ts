@@ -30,6 +30,7 @@ export async function updateSession(request: NextRequest) {
   const isStudentRoute = pathname.startsWith('/student');
   const isParentRoute = pathname.startsWith('/parent');
   const isTeacherRoute = pathname.startsWith('/teacher');
+  const isOnboardingRoute = pathname === '/onboarding';
   const isAuthRoute = pathname === '/signup' || pathname === '/admin/login';
   const isProtectedRoute = isAdminRoute || isStudentRoute || isParentRoute || isTeacherRoute;
 
@@ -41,15 +42,15 @@ export async function updateSession(request: NextRequest) {
       c.name.includes('supabase-auth-token')
   );
 
-  // Optimization 1: If it's a protected route and has no auth cookies at all, redirect immediately (0ms)
-  if (isProtectedRoute && !hasAuthCookie) {
+  // Optimization 1: If it's a protected route or onboarding and has no auth cookies at all, redirect immediately (0ms)
+  if ((isProtectedRoute || isOnboardingRoute) && !hasAuthCookie) {
     const loginUrl = new URL(isAdminRoute ? '/admin/login' : '/', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   // Optimization 2: If it's a public route and has no auth cookies, skip remote network calls completely
-  if (!isProtectedRoute && !hasAuthCookie) {
+  if (!isProtectedRoute && !isOnboardingRoute && !hasAuthCookie) {
     return supabaseResponse;
   }
 
@@ -87,6 +88,36 @@ export async function updateSession(request: NextRequest) {
     console.warn(`[Middleware] Supabase auth check unavailable (${errorMsg})`);
   }
 
+  // Onboarding Route Check
+  if (isOnboardingRoute) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // If already onboarded, send directly to role dashboard
+      if (profile && profile.onboarding_completed !== false) {
+        const target =
+          profile.role === 'admin'
+            ? '/admin'
+            : profile.role === 'teacher'
+            ? '/teacher'
+            : profile.role === 'parent'
+            ? '/parent'
+            : '/student';
+        return NextResponse.redirect(new URL(target, request.url));
+      }
+    } catch {
+      // Allow proceeding to onboarding
+    }
+  }
+
   // Protected Routes Check
   if (isProtectedRoute) {
     if (!user) {
@@ -95,13 +126,18 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Role-based protection
+    // Role-based protection & Onboarding enforcement
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, onboarding_completed')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+
+      // If user has not completed onboarding, force redirection to onboarding
+      if (profile && profile.onboarding_completed === false) {
+        return NextResponse.redirect(new URL('/onboarding', request.url));
+      }
 
       const role = profile?.role;
 

@@ -41,6 +41,8 @@ import {
   PieChart,
   Activity,
   ChevronRight,
+  Home,
+  CreditCard,
 } from 'lucide-react';
 import { ChannelDetailsOverlay } from '@/components/student/ChannelDetailsOverlay';
 import {
